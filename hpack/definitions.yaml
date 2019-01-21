@@ -1,0 +1,81 @@
+# This file defines sensible defaults but does not actually apply
+# any of them, so it can be safely included.
+
+_definitions:
+  _top-level:
+    - &meta
+        license:            MPL-2.0
+        author:             Serokell
+        maintainer:         hi@serokell.io
+        copyright:          2019 Serokell OÜ
+        github:             serokell/servant-util
+        category:           Web
+        extra-source-files: [README.md, CHANGES.md]
+        description:        Please see the README on GitHub at <https://github.com/serokell/servant-util#README.md>
+
+    - &default-extensions
+        - AllowAmbiguousTypes
+        - BangPatterns
+        - ConstraintKinds
+        - DataKinds
+        - DefaultSignatures
+        - DeriveDataTypeable
+        - DeriveGeneric
+        - EmptyCase
+        - FlexibleContexts
+        - FlexibleInstances
+        - FunctionalDependencies
+        - GeneralizedNewtypeDeriving
+        - LambdaCase
+        - MonadFailDesugaring
+        - MultiParamTypeClasses
+        - MultiWayIf
+        - NamedFieldPuns
+        - OverloadedStrings
+        - PatternSynonyms
+        - RankNTypes
+        - RecordWildCards
+        - ScopedTypeVariables
+        - StandaloneDeriving
+        - TemplateHaskell
+        - TupleSections
+        - TypeFamilies
+        - TypeOperators
+        - UndecidableInstances
+        - ViewPatterns
+        - TypeApplications
+
+    - &dependencies
+        - base-noprelude >= 4.9 && < 5
+        - universum
+
+    - &ghc-options
+        - -Wall
+        - -Werror
+
+  _utils:
+    - &lib-common
+        source-dirs: src
+
+    - &test-common
+        main:        Spec.hs
+        source-dirs: tests
+
+        ghc-options:
+          - -threaded
+          - -rtsopts
+          - -with-rtsopts=-N
+
+    - &bench-common
+        source-dirs: bench
+
+        ghc-options:
+          - -threaded
+
+    - &exec-common
+        main:        Main.hs
+        ghc-options:
+          - -threaded
+          - -rtsopts
+          - -with-rtsopts=-N
+          - -O2

@@ -1,17 +1,14 @@
-# Serokell servant-util
+# Servant-util
 
-[![Build Status](https://travis-ci.org/serokell/servant-util.svg?branch=master)](https://travis-ci.org/serokell/servant-util)
-
-Servant-util provides common primitives for building backends with [Servant](https://haskell-servant.github.io/) library.
+This package contains the core primitives which directly participate in API and some common utilities.
 
 ## Build Instructions [↑](#-patak)
 
-Run `stack build` to build everything.
+Run `stack build servant-util` to build everything.
 
 ## Usage [↑](#-patak)
 
-Start from reading [the core package usage](/servant-util/README.md) which contains building blocks for your API.
-When it comes to a server implementation, choose the package appropriate for your needs.
+TBD
 
 ## For Contributors [↑](#-patak)
 

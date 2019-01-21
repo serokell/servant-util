@@ -1,18 +1,9 @@
+<<: !include "../hpack/module.yaml"
 name:                servant-util
 version:             0.1.0
-github:              "serokell/servant-util"
-license:             MPL-2.0
-author:              "Kostantin Ivanov"
-maintainer:          "martoon@hsk.com"
 copyright:           "2019 Serokell OÜ"
 synopsis:            Servant servers utilities.
 category:            Web
-
-extra-source-files:
-- README.md
-- CHANGES.md
-
-description:         Please see the README on GitHub at <https://github.com/serokell/servant-util#README.md>
 
 dependencies:
 - aeson
@@ -38,36 +29,20 @@ dependencies:
 
 library:
   source-dirs: src
+
   build-tools:
     - autoexporter
 
-ghc-options:
-- -Wall
-- -Werror
+<<: *ghc-options
 
 executables:
   servant-util-examples:
-    main:                Main.hs
+    <<: *exec-common
     source-dirs:         examples
-    ghc-options:
-    - -threaded
-    - -rtsopts
-    - -with-rtsopts=-N
-    dependencies:
-    - servant-util
-    - universum
 
 tests:
   servant-util-test:
-    main:                Spec.hs
-    source-dirs:         test
-    ghc-options:
-    - -threaded
-    - -rtsopts
-    - -with-rtsopts=-N
-    dependencies:
-    - servant-util
-    - universum
+    <<: *test-common
 
 default-extensions:
 - AllowAmbiguousTypes
