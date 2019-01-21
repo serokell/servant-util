@@ -17,9 +17,11 @@ description:         Please see the README on GitHub at <https://github.com/sero
 dependencies:
 - aeson
 - base >= 4.7 && < 5
+- containers
 - data-default
 - fmt
 - http-types
+- megaparsec
 - mtl
 - pretty-terminal
 - safe-exceptions

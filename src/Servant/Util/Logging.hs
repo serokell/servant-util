@@ -2,12 +2,15 @@
 module Servant.Util.Logging
     ( -- * Automatic requests logging
       LoggingApi
+    , LoggingApiRec
+    , HasLoggingServer (..)
     , ServantLogConfig (..)
     , ForResponseLog (..)
     , buildListForResponse
     , buildForResponse
     , ApiHasArgClass (..)
     , ApiCanLogArg (..)
+    , addParamLogInfo
     ) where
 
 import Universum hiding (log)
