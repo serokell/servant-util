@@ -25,12 +25,14 @@ _definitions:
         - FlexibleContexts
         - FlexibleInstances
         - FunctionalDependencies
+        - GADTs
         - GeneralizedNewtypeDeriving
         - LambdaCase
         - MonadFailDesugaring
         - MultiParamTypeClasses
         - MultiWayIf
         - NamedFieldPuns
+        - NoImplicitPrelude
         - OverloadedStrings
         - PatternSynonyms
         - RankNTypes

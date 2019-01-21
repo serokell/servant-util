@@ -2,7 +2,9 @@ resolver: lts-11.17
 
 packages:
 - servant-util
+- servant-util-beam-pg
 
 extra-deps:
+- beam-postgres-0.3.2.2
 - pretty-terminal-0.1.0.0
 - universum-1.1.0
