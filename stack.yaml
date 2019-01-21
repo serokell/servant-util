@@ -1,4 +1,5 @@
 resolver: lts-11.17
 
 extra-deps:
+- pretty-terminal-0.1.0.0
 - universum-1.1.0

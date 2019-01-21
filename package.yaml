@@ -15,12 +15,29 @@ extra-source-files:
 description:         Please see the README on GitHub at <https://github.com/serokell/servant-util#README.md>
 
 dependencies:
+- aeson
 - base >= 4.7 && < 5
+- data-default
+- fmt
+- http-types
+- mtl
+- pretty-terminal
+- safe-exceptions
+- servant
+- servant-client
+- servant-client-core
+- servant-generic
+- servant-server
+- text
+- text-format
+- time
+- reflection
+- universum
 
 library:
   source-dirs: src
-  dependencies:
-  - universum
+  build-tools:
+    - autoexporter
 
 ghc-options:
 - -Wall
