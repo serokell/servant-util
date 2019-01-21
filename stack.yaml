@@ -1,0 +1,4 @@
+resolver: lts-11.17
+
+extra-deps:
+- universum-1.1.0

@@ -1,0 +1,84 @@
+name:                servant-util
+version:             0.1.0
+github:              "serokell/servant-util"
+license:             BSD3
+author:              "Kostantin Ivanov"
+maintainer:          "martoon@hsk.com"
+copyright:           "2019 Serokell OÜ"
+synopsis:            Servant servers utilities.
+category:            Web
+
+extra-source-files:
+- README.md
+- CHANGES.md
+
+description:         Please see the README on GitHub at <https://github.com/serokell/servant-util#README.md>
+
+dependencies:
+- base >= 4.7 && < 5
+
+library:
+  source-dirs: src
+  dependencies:
+  - universum
+
+ghc-options:
+- -Wall
+- -Werror
+
+executables:
+  servant-util-examples:
+    main:                Main.hs
+    source-dirs:         examples
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - servant-util
+    - universum
+
+tests:
+  servant-util-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - servant-util
+    - universum
+
+default-extensions:
+- AllowAmbiguousTypes
+- BangPatterns
+- ConstraintKinds
+- DataKinds
+- DefaultSignatures
+- DeriveDataTypeable
+- DeriveGeneric
+- EmptyCase
+- FlexibleContexts
+- FlexibleInstances
+- FunctionalDependencies
+- GeneralizedNewtypeDeriving
+- LambdaCase
+- MonadFailDesugaring
+- MultiParamTypeClasses
+- MultiWayIf
+- NamedFieldPuns
+- NoImplicitPrelude
+- OverloadedStrings
+- PatternSynonyms
+- RankNTypes
+- RecordWildCards
+- ScopedTypeVariables
+- StandaloneDeriving
+- TypeApplications
+- TemplateHaskell
+- TupleSections
+- TypeFamilies
+- TypeOperators
+- UndecidableInstances
+- ViewPatterns
