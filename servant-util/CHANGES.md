@@ -1,4 +1,6 @@
 Unreleased
 =====
 
-* Add logging.
+* Added logging.
+* Added sorting.
+* Add pagination.
