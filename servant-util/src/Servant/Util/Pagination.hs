@@ -1,7 +1,7 @@
 -- | Provides pagination API combinator.
 module Servant.Util.Pagination
     ( PaginationParams
-    , DefPageSize
+    , PaginationSettings (..)
     , PaginationSpec (..)
     , itemsOnPage
     , skipping
@@ -9,6 +9,7 @@ module Servant.Util.Pagination
 
 import Universum
 
+import Data.Default (Default (..))
 import qualified Data.Text as T
 import GHC.TypeLits (Nat)
 import Numeric.Positive (Positive)
@@ -20,7 +21,8 @@ import Servant.Util.Internal.Util
 import Servant.Util.Logging
 
 -- | Settings used to define default number of items per page.
-data DefPageSize (pageSize :: Nat)
+data PaginationSettings
+    = DefPageSize Nat
 
 -- | API combinator which enables pagination.
 --
@@ -30,7 +32,7 @@ data DefPageSize (pageSize :: Nat)
 --
 -- Your endpoint implementation will be provided with 'PaginationSpec' variable
 -- which will contain parameters provided by the user.
-data PaginationParams settings
+data PaginationParams (settings :: PaginationSettings)
 
 -- | Contains pagination parameters provided by the user.
 -- 'psLimit' field cannot be limit.
@@ -46,7 +48,7 @@ type PaginationParamsExpanded subApi =
     subApi
 
 instance ( HasServer subApi ctx
-         , settings ~ DefPageSize defPageSize
+         , settings ~ 'DefPageSize defPageSize
          , KnownPositive defPageSize
          ) =>
          HasServer (PaginationParams settings :> subApi) ctx where
@@ -65,7 +67,7 @@ instance ( HasServer subApi ctx
         hoistServerWithContext (Proxy @subApi) pc nt . s
 
 instance ( HasLoggingServer config subApi ctx
-         , settings ~ DefPageSize defPageSize
+         , settings ~ 'DefPageSize defPageSize
          , KnownPositive defPageSize
          ) =>
          HasLoggingServer config (PaginationParams settings :> subApi) ctx where
@@ -88,6 +90,10 @@ itemsOnPage limit = PaginationSpec{ psOffset = 0, psLimit = limit }
 -- | Convenient builder for 'PaginationRequest', modifies offset.
 skipping :: Natural -> PaginationSpec -> PaginationSpec
 skipping offset pagination = pagination{ psOffset = offset }
+
+-- | Retains full content.
+instance Default PaginationSpec where
+    def = itemsOnPage (fromIntegral $ maxBound @Word64)
 
 instance HasClient m subApi =>
          HasClient m (PaginationParams settings :> subApi) where
