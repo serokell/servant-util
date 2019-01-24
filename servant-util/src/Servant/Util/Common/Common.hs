@@ -5,12 +5,17 @@ module Servant.Util.Common.Common
 
     , inRouteServer
     , symbolValT
+
+    , TyNamedParam (..)
+    , type (?:)
+    , ReifyParamsNames (..)
     ) where
 
-import Universum hiding (log)
+import qualified Data.Set as S
+import Universum
 
 import qualified Data.Text.Buildable as B
-import GHC.TypeLits (KnownSymbol, symbolVal)
+import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
 import Servant.API ((:>), Capture, QueryFlag, QueryParam, ReqBody)
 import Servant.Server (Handler (..), HasServer (..), Server)
 import qualified Servant.Server.Internal as SI
@@ -67,3 +72,23 @@ inRouteServer routing f = \_ ctx delayed -> routing Proxy ctx (fmap f delayed)
 -- | Similar to 'symbolVal', but shorter in use.
 symbolValT :: forall s. KnownSymbol s => Text
 symbolValT = fromString $ symbolVal (Proxy @s)
+
+-- | Pair of type and its name as it appears in API.
+data TyNamedParam a = TyNamedParam Symbol a
+
+-- | Convenient type alias for 'TyNamedParam'.
+type (?:) = 'TyNamedParam
+
+-- | Extract info from 'SortingParams'.
+class ReifyParamsNames (params :: [TyNamedParam *]) where
+    -- | Get all expected parameter names.
+    reifyParamsNames :: Set Text
+
+instance ReifyParamsNames '[] where
+    reifyParamsNames = mempty
+
+-- TODO: missing SortingParamsNoName
+instance (KnownSymbol name, ReifyParamsNames params) =>
+         ReifyParamsNames ('TyNamedParam name p ': params) where
+    reifyParamsNames =
+        toText (symbolVal @name Proxy) `S.insert` reifyParamsNames @params

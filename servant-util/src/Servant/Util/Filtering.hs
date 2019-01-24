@@ -1,0 +1,294 @@
+{-# LANGUAGE DeriveFunctor #-}
+
+-- | Allows complex filtering on specified fields.
+module Servant.Util.Filtering
+    ( FilteringParams
+    , SupportedFilters
+    , IsFilter (..)
+    , SomeTypeFilter (..)
+    , SomeFilter (..)
+    , FilteringSpec (..)
+
+     -- * Filter types
+    , FilterMatching
+    , FilterComparing
+    , FilterOnLikeTemplate
+
+    , NumericFilterTypes
+    , TextFilterTypes
+    , DatetimeFilterTypes
+
+    , FilteringParamTypesOf
+    , FilteringParamsOf
+    , FilteringSpecOf
+    ) where
+
+import Universum
+
+import qualified Data.Text as T
+import Servant.Client (HasClient (..))
+import Servant (HasServer (..), (:>), FromHttpApiData(..), err400, ServantErr(..))
+import Network.Wai.Internal (rawQueryString)
+import Servant.Server.Internal (addParameterCheck, withRequest, delayedFailFatal)
+import Fmt ((+|),(|+))
+import Data.Time.Clock (UTCTime)
+import Network.HTTP.Types.URI (QueryText, parseQueryText)
+import qualified Data.Map as M
+import GHC.TypeLits (KnownSymbol)
+
+import Servant.Util.Common
+
+-- | Servant API combinator which enables filtering on given fields.
+--
+-- If type @T@ appears with a name @name@ in @params@ argument, then query parameters of
+-- @name[op]=value@ format will be accepted, where @op@ is a filtering operation
+-- (e.g. equal, not equal, greater) and @value@ is an item of type @T@ we filter against.
+-- Multiple filters will form a conjunction.
+--
+-- List of allowed filtering operations depends on type @T@ and is specified by
+-- 'SupportedFilters' type family.
+--
+-- Operation argument is optional, when not specified "equality" filter is applied.
+--
+-- Endpoint implementation will receive 'FilteringSpec' value which contains information
+-- about all filters passed by user. You can later put it to an appropriate function
+-- to apply filtering.
+data FilteringParams (params :: [TyNamedParam *])
+
+-- | For a type of field, get a list of supported filtering operations on this field.
+type family SupportedFilters ty :: [* -> *]
+
+-- | Support for @(==)@, @(/=)@ and @IN <values list>@ operations.
+data FilterMatching a
+    = FilterMatching a
+    | FilterNotMatching a
+    | FilterItemsIn [a]
+
+-- | Support for @(<)@, @(>)@, @(<=)@ and @(>=)@ operations.
+data FilterComparing a
+    = FilterGT a
+    | FilterLT a
+    | FilterGTE a
+    | FilterLTE a
+
+-- | Support for SQL's LIKE syntax.
+data FilterOnLikeTemplate a
+    = FilterOnLikeTemplate Text
+
+type NumericFilterTypes = [FilterMatching, FilterComparing]
+type TextFilterTypes = [FilterMatching, FilterComparing, FilterOnLikeTemplate]
+type DatetimeFilterTypes = '[FilterComparing]
+
+type instance SupportedFilters Bool = '[FilterMatching]
+type instance SupportedFilters Int = NumericFilterTypes
+type instance SupportedFilters Text = TextFilterTypes
+type instance SupportedFilters ByteString = TextFilterTypes
+type instance SupportedFilters UTCTime = DatetimeFilterTypes
+
+-- | Parses text on the right side of "=" sign in query parameters.
+newtype FilteringValueParser a = FilteringValueParser (Text -> Either Text a)
+    deriving (Functor)
+
+-- | Delegate to 'FromHttpApiData'.
+parseFilteringValueAsIs :: FromHttpApiData a => FilteringValueParser a
+parseFilteringValueAsIs = FilteringValueParser parseUrlPiece
+
+-- | Application of a filter type to Servant API.
+class IsFilter (filter :: * -> *) where
+    -- | For each supported filtering operation specifies parser for a filtering value.
+    filterParsers
+        :: FromHttpApiData a
+        => Proxy filter -> Map Text $ FilteringValueParser (filter a)
+
+-- | If no filtering command specified, think like if the given one was passed.
+defFilteringCmd :: Text
+defFilteringCmd = "eq"
+
+instance IsFilter FilterMatching where
+    filterParsers _ = M.fromList
+        [ ( defFilteringCmd
+          , FilterMatching <$> parseFilteringValueAsIs
+          )
+        , ( "neq"
+          , FilterNotMatching <$> parseFilteringValueAsIs
+          )
+        , ( "in"
+          , FilterItemsIn <$> FilteringValueParser parseValuesList
+          )
+        ]
+      where
+        parseValuesList text = do
+            text' <- maybeToRight ("Expected comma-separated list within '[]'") $
+                T.stripPrefix "[" text >>= T.stripSuffix "]"
+            let vals = T.splitOn "," text'
+            mapM parseUrlPiece vals
+
+instance IsFilter FilterComparing where
+    filterParsers _ = M.fromList
+        [ ( "gt"
+          , FilterGT <$> parseFilteringValueAsIs
+          )
+        , ( "lt"
+          , FilterLT <$> parseFilteringValueAsIs
+          )
+        , ( "gte"
+          , FilterGTE <$> parseFilteringValueAsIs
+          )
+        , ( "lte"
+          , FilterLTE <$> parseFilteringValueAsIs
+          )
+        ]
+
+instance IsFilter FilterOnLikeTemplate where
+    filterParsers _ = M.fromList
+        [ ( "like"
+          , FilterOnLikeTemplate <$> parseFilteringValueAsIs
+          )
+        ]
+
+-- | Multi-version of 'IsFilter'.
+class AreFilters (filters :: [* -> *]) where
+    mapFilterTypes
+        :: (forall filter. IsFilter filter => Proxy filter -> a)
+        -> Proxy filters -> [a]
+
+instance AreFilters '[] where
+    mapFilterTypes _ _ = []
+
+instance (IsFilter filter, AreFilters filters) =>
+         AreFilters (filter ': filters) where
+    mapFilterTypes mapper _ =
+        mapper (Proxy @filter) : mapFilterTypes mapper (Proxy @filters)
+
+-- | Some filter for an item of type @a@.
+-- Filter type is guaranteed to be one of @SupportedFilters a@.
+data SomeTypeFilter a = forall filter. IsFilter filter => SomeTypeFilter (filter a)
+
+filtersParsers
+    :: forall filters a.
+       (AreFilters filters, FromHttpApiData a)
+    => Map Text $ FilteringValueParser (SomeTypeFilter a)
+filtersParsers =
+    let parsers = mapFilterTypes (fmap (fmap SomeTypeFilter) . filterParsers) (Proxy @filters)
+    in foldl' (M.unionWithKey onDuplicateCmd) mempty parsers
+  where
+    onDuplicateCmd cmd = error $ "Different filters have the same command " <> show cmd
+
+-- | Try to parse given query parameter as filter applicable to type @a@.
+-- If the parameter is not recognized as filtering one, 'Nothing' is returned.
+-- Otherwise it is parsed and any potential errors are reported as-is.
+parseTypeFilteringParam
+    :: forall a (filters :: [* -> *]).
+       (filters ~ SupportedFilters a, AreFilters filters, FromHttpApiData a)
+    => Text -> Text -> Text -> Maybe (Either Text $ SomeTypeFilter a)
+parseTypeFilteringParam field key val =
+    let (field', remainder) = T.break (== '[') key
+    in guard (field == field') $> do
+        mop <- if null remainder
+                then pure Nothing
+                else fmap Just $
+                     maybeToRight ("Unclosed bracket in query key '" +| key |+ "'") $
+                     T.stripSuffix "]" remainder
+
+        let op = mop ?: defFilteringCmd
+        let parsersPerOp = filtersParsers @filters @a
+        let allowedOps = M.keys parsersPerOp
+
+        FilteringValueParser parser <- case M.lookup op parsersPerOp of
+            Nothing -> Left $ "Unsupported filtering command " <> show op <> ". \
+                              \Available commands: " <>
+                              (T.intercalate ", " $ map show allowedOps)
+            Just parser -> pure parser
+
+        parser val
+{-# INLINE parseTypeFilteringParam #-}
+
+-- | Some filter.
+-- This filter is guaranteed to match a type which is mentioned in @params@.
+data SomeFilter (params :: [TyNamedParam *]) = forall a. SomeFilter (SomeTypeFilter a)
+
+extendSomeFilter :: SomeFilter params -> SomeFilter (param ': params)
+extendSomeFilter (SomeFilter f) = SomeFilter f
+
+-- | Application of filter params.
+class AreFilteringParams (params :: [TyNamedParam *])  where
+    -- | Try to parser given query parameter as a filter corresponding to @params@
+    -- configuration.
+    -- If the query parameter is not recognized as filtering one, 'Nothing' is returned.
+    -- Otherwise it is parsed and any potential errors are reported as-is.
+    parseFilteringParam :: Text -> Text -> Maybe (Either Text $ SomeFilter params)
+
+instance AreFilteringParams '[] where
+    parseFilteringParam _ _ = Nothing
+    {-# INLINE parseFilteringParam #-}
+
+instance ( FromHttpApiData ty
+         , AreFilters (SupportedFilters ty)
+         , KnownSymbol name
+         , AreFilteringParams params
+         ) =>
+         AreFilteringParams ('TyNamedParam name ty ': params) where
+    parseFilteringParam key val = asum
+        [ fmap (fmap SomeFilter) $
+            parseTypeFilteringParam @ty (symbolValT @name) key val
+
+        , fmap (fmap extendSomeFilter) $
+            parseFilteringParam @params key val
+        ]
+    {-# INLINE parseFilteringParam #-}
+
+extractQueryParamsFilters
+    :: forall (params :: [TyNamedParam *]).
+       (AreFilteringParams params)
+    => QueryText -> Either Text [SomeFilter params]
+extractQueryParamsFilters qt = sequence $ do
+    (key, mvalue) <- qt
+    Just value <- pure mvalue
+    Just aFilter <- pure $ parseFilteringParam @params key value
+    return aFilter
+{-# INLINE extractQueryParamsFilters #-}
+
+-- | This is what you get in endpoint implementation, it contains all filters
+-- supplied by a user.
+-- Invariant: each filter correspond to some type mentioned in @params@.
+data FilteringSpec (params :: [TyNamedParam *]) = FilteringSpec [SomeFilter params]
+
+instance ( HasServer subApi ctx
+         , AreFilteringParams params
+         ) =>
+         HasServer (FilteringParams params :> subApi) ctx where
+
+    type ServerT (FilteringParams params :> subApi) m =
+        FilteringSpec params -> ServerT subApi m
+
+    route _ ctx delayed =
+        route (Proxy @subApi) ctx $
+        addParameterCheck delayed (withRequest extractParams)
+      where
+        extractParams req =
+            let -- Copy-pasted from 'instance HasServer QueryParam'
+                queryText = parseQueryText (rawQueryString req)
+            in fmap FilteringSpec . eitherToDelayed $
+                   extractQueryParamsFilters @params queryText
+        eitherToDelayed = \case
+            Left err -> delayedFailFatal err400{ errBody = encodeUtf8 err }
+            Right x  -> pure x
+
+    hoistServerWithContext _ pm hst s = hoistServerWithContext (Proxy @subApi) pm hst . s
+
+-- | We do not yet support passing filtering parameters in client.
+instance HasClient m subApi =>
+         HasClient m (FilteringParams params :> subApi) where
+    type Client m (FilteringParams params :> subApi) = Client m subApi
+    clientWithRoute mp _ req = clientWithRoute mp (Proxy @subApi) req
+
+-- | For a given return type of an endpoint get corresponding filtering params.
+-- This mapping is sensible, since we usually allow to filter only on fields appearing in
+-- endpoint's response.
+type family FilteringParamTypesOf a :: [TyNamedParam *]
+
+-- | This you will most probably want to specify in API.
+type FilteringParamsOf a = FilteringParams (FilteringParamTypesOf a)
+
+-- | This you will most probably want to specify in an endpoint implementation.
+type FilteringSpecOf a = FilteringSpec (FilteringParamTypesOf a)

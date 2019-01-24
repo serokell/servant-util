@@ -26,6 +26,7 @@ dependencies:
 - time
 - reflection
 - universum
+- wai
 
 library:
   source-dirs: src

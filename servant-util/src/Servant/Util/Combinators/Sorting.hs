@@ -21,7 +21,7 @@ import qualified Data.List as L
 import Data.Set (Set)
 import qualified Data.Set as S
 import Fmt (Buildable (..), fmt)
-import GHC.TypeLits (ErrorMessage (..), KnownSymbol, Symbol, TypeError, symbolVal)
+import GHC.TypeLits (ErrorMessage (..), KnownSymbol, TypeError, symbolVal)
 import Servant.API (FromHttpApiData (..))
 import Servant.API ((:>), QueryParam)
 import Servant.Client.Core (Client, HasClient (..))
@@ -32,12 +32,6 @@ import qualified Text.Megaparsec.Char as P
 
 import Servant.Util.Combinators.Logging
 import Servant.Util.Common
-
--- | Pair of type and its name as it appears in API.
-data TyNamedParam a = TyNamedParam Symbol a
-
--- | Convenient type alias for 'TyNamedParam'.
-type (?:) = 'TyNamedParam
 
 {- | Servant API combinator which allows to accept sorting parameters as a query parameter.
 
@@ -214,8 +208,6 @@ instance ( HasLoggingServer config subApi ctx
             in (addParamLogInfo text paramsInfo, handler sorting)
 
 -- | We do not yet support passing sorting parameters in client.
--- We seem to be too far away from writing server-client tests in Haskell for now,
--- and I'm not sure whether this will ever be useful (@martoon).
 instance HasClient m subApi =>
          HasClient m (SortingParams params :> subApi) where
     type Client m (SortingParams params :> subApi) = Client m subApi
