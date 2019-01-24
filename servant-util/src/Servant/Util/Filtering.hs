@@ -10,9 +10,10 @@ module Servant.Util.Filtering
     , FilteringSpec (..)
 
      -- * Filter types
-    , FilterMatching
-    , FilterComparing
-    , FilterOnLikeTemplate
+    , FilterMatching (..)
+    , FilterComparing (..)
+    , FilterOnLikeTemplate (..)
+    , LikeFormatter (..)
 
     , NumericFilterTypes
     , TextFilterTypes
@@ -71,12 +72,14 @@ data FilterComparing a
     | FilterGTE a
     | FilterLTE a
 
+newtype LikeFormatter = LikeFormatter { unLikeFormatter :: Text }
+
 -- | Support for SQL's LIKE syntax.
 data FilterOnLikeTemplate a
-    = FilterOnLikeTemplate Text
+    = FilterOnLikeTemplate LikeFormatter
 
 type NumericFilterTypes = [FilterMatching, FilterComparing]
-type TextFilterTypes = [FilterMatching, FilterComparing, FilterOnLikeTemplate]
+type TextFilterTypes = [FilterMatching, FilterComparing]
 type DatetimeFilterTypes = '[FilterComparing]
 
 type instance SupportedFilters Bool = '[FilterMatching]
@@ -94,7 +97,7 @@ parseFilteringValueAsIs :: FromHttpApiData a => FilteringValueParser a
 parseFilteringValueAsIs = FilteringValueParser parseUrlPiece
 
 -- | Application of a filter type to Servant API.
-class IsFilter (filter :: * -> *) where
+class Typeable filter => IsFilter (filter :: * -> *) where
     -- | For each supported filtering operation specifies parser for a filtering value.
     filterParsers
         :: FromHttpApiData a
@@ -139,12 +142,13 @@ instance IsFilter FilterComparing where
           )
         ]
 
-instance IsFilter FilterOnLikeTemplate where
-    filterParsers _ = M.fromList
-        [ ( "like"
-          , FilterOnLikeTemplate <$> parseFilteringValueAsIs
-          )
-        ]
+-- instance IsFilter FilterOnLikeTemplate where
+--     filterParsers _ = M.fromList
+--         [ ( "like"
+--           , undefined
+
+--           )
+--         ]
 
 -- | Multi-version of 'IsFilter'.
 class AreFilters (filters :: [* -> *]) where
@@ -205,7 +209,8 @@ parseTypeFilteringParam field key val =
 
 -- | Some filter.
 -- This filter is guaranteed to match a type which is mentioned in @params@.
-data SomeFilter (params :: [TyNamedParam *]) = forall a. SomeFilter (SomeTypeFilter a)
+data SomeFilter (params :: [TyNamedParam *]) =
+    forall a. Typeable a => SomeFilter (SomeTypeFilter a)
 
 extendSomeFilter :: SomeFilter params -> SomeFilter (param ': params)
 extendSomeFilter (SomeFilter f) = SomeFilter f
@@ -223,6 +228,7 @@ instance AreFilteringParams '[] where
     {-# INLINE parseFilteringParam #-}
 
 instance ( FromHttpApiData ty
+         , Typeable ty
          , AreFilters (SupportedFilters ty)
          , KnownSymbol name
          , AreFilteringParams params

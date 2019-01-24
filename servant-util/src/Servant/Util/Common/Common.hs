@@ -1,5 +1,6 @@
 module Servant.Util.Common.Common
-    ( ApplicationRS
+    ( ApplicationLS
+    , ApplicationRS
     , ApiHasArgClass (..)
     , ApiHasArg
 
@@ -8,6 +9,7 @@ module Servant.Util.Common.Common
 
     , TyNamedParam (..)
     , type (?:)
+    , TyNamedParamType
     , ReifyParamsNames (..)
     ) where
 
@@ -20,9 +22,12 @@ import Servant.API ((:>), Capture, QueryFlag, QueryParam, ReqBody)
 import Servant.Server (Handler (..), HasServer (..), Server)
 import qualified Servant.Server.Internal as SI
 
+type family ApplicationLS x where
+    ApplicationLS (a b) = a
+
 -- | Extract right side of type application.
-type family ApplicationRS api where
-    ApplicationRS (apiType a) = a
+type family ApplicationRS x where
+    ApplicationRS (a b) = b
 
 -- | Proves info about argument specifier of servant API.
 class ApiHasArgClass api where
@@ -79,6 +84,9 @@ data TyNamedParam a = TyNamedParam Symbol a
 -- | Convenient type alias for 'TyNamedParam'.
 type (?:) = 'TyNamedParam
 
+type family TyNamedParamType p where
+    TyNamedParamType ('TyNamedParam _ a) = a
+
 -- | Extract info from 'SortingParams'.
 class ReifyParamsNames (params :: [TyNamedParam *]) where
     -- | Get all expected parameter names.
@@ -87,7 +95,6 @@ class ReifyParamsNames (params :: [TyNamedParam *]) where
 instance ReifyParamsNames '[] where
     reifyParamsNames = mempty
 
--- TODO: missing SortingParamsNoName
 instance (KnownSymbol name, ReifyParamsNames params) =>
          ReifyParamsNames ('TyNamedParam name p ': params) where
     reifyParamsNames =
