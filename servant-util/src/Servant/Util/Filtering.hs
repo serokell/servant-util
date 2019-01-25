@@ -39,6 +39,9 @@ import GHC.TypeLits (KnownSymbol)
 
 import Servant.Util.Common
 
+-- TODO: map values we filter on
+-- TODO: Auto filters and Manual filters
+
 -- | Servant API combinator which enables filtering on given fields.
 --
 -- If type @T@ appears with a name @name@ in @params@ argument, then query parameters of
@@ -64,6 +67,7 @@ data FilterMatching a
     = FilterMatching a
     | FilterNotMatching a
     | FilterItemsIn [a]
+    deriving (Functor)
 
 -- | Support for @(<)@, @(>)@, @(<=)@ and @(>=)@ operations.
 data FilterComparing a
@@ -71,12 +75,14 @@ data FilterComparing a
     | FilterLT a
     | FilterGTE a
     | FilterLTE a
+    deriving (Functor)
 
 newtype LikeFormatter = LikeFormatter { unLikeFormatter :: Text }
 
 -- | Support for SQL's LIKE syntax.
 data FilterOnLikeTemplate a
     = FilterOnLikeTemplate LikeFormatter
+    deriving (Functor)
 
 type NumericFilterTypes = [FilterMatching, FilterComparing]
 type TextFilterTypes = [FilterMatching, FilterComparing]
@@ -103,6 +109,9 @@ class Typeable filter => IsFilter (filter :: * -> *) where
         :: FromHttpApiData a
         => Proxy filter -> Map Text $ FilteringValueParser (filter a)
 
+    mapFilterValue
+        :: (a -> b) -> filter a -> filter b
+
 -- | If no filtering command specified, think like if the given one was passed.
 defFilteringCmd :: Text
 defFilteringCmd = "eq"
@@ -126,6 +135,8 @@ instance IsFilter FilterMatching where
             let vals = T.splitOn "," text'
             mapM parseUrlPiece vals
 
+    mapFilterValue = fmap
+
 instance IsFilter FilterComparing where
     filterParsers _ = M.fromList
         [ ( "gt"
@@ -141,6 +152,8 @@ instance IsFilter FilterComparing where
           , FilterLTE <$> parseFilteringValueAsIs
           )
         ]
+
+    mapFilterValue = fmap
 
 -- instance IsFilter FilterOnLikeTemplate where
 --     filterParsers _ = M.fromList
@@ -167,6 +180,9 @@ instance (IsFilter filter, AreFilters filters) =>
 -- | Some filter for an item of type @a@.
 -- Filter type is guaranteed to be one of @SupportedFilters a@.
 data SomeTypeFilter a = forall filter. IsFilter filter => SomeTypeFilter (filter a)
+
+mapSomeTypeFilter :: (a -> b) -> SomeTypeFilter a -> SomeTypeFilter b
+mapSomeTypeFilter f (SomeTypeFilter filtr) = SomeTypeFilter (mapFilterValue f filtr)
 
 filtersParsers
     :: forall filters a.

@@ -18,12 +18,9 @@ import Universum
 import Data.Char (isAlphaNum)
 import Data.Default (Default (..))
 import qualified Data.List as L
-import Data.Set (Set)
 import qualified Data.Set as S
 import Fmt (Buildable (..), fmt)
-import GHC.TypeLits (ErrorMessage (..), KnownSymbol, TypeError, symbolVal)
-import Servant.API (FromHttpApiData (..))
-import Servant.API ((:>), QueryParam)
+import Servant.API ((:>), FromHttpApiData (..), QueryParam)
 import Servant.Client.Core (Client, HasClient (..))
 import Servant.Server (HasServer (..), Tagged (..), unTagged)
 import Text.Megaparsec ((<?>))
@@ -91,26 +88,6 @@ instance Buildable SortingItem where
 
 deriving instance Buildable (SortingItemTagged param)
 
--- | Extract info from 'SortingParams'.
-class ReifySortingParams (params :: [TyNamedParam *]) where
-    -- | Get all expected parameter names.
-    reifySortingParamsNames :: Set Text
-
-instance ReifySortingParams '[] where
-    reifySortingParamsNames = mempty
-
-instance (KnownSymbol name, ReifySortingParams params, SortParamsContainNoName params name) =>
-         ReifySortingParams ('TyNamedParam name p ': params) where
-    reifySortingParamsNames =
-        toText (symbolVal @name Proxy) `S.insert` reifySortingParamsNames @params
-
-type family SortParamsContainNoName (params :: [TyNamedParam *]) name :: Constraint where
-    SortParamsContainNoName '[] name = ()
-    SortParamsContainNoName ('TyNamedParam name p ': params) name =
-        TypeError ('Text "Duplicate name in sorting parameters " ':$$: 'ShowType name)
-    SortParamsContainNoName ('TyNamedParam name p ': params) name' =
-        SortParamsContainNoName params name'
-
 -- | Tagged, because we want to retain list of allowed fields for parsing
 -- (in @instance FromHttpApiData@).
 type TaggedSortingItemsList allowed = Tagged (allowed :: [TyNamedParam *]) [SortingItem]
@@ -142,7 +119,7 @@ sortingCheckDuplicates items =
 
 -- | Consumes "sortBy" query parameter and fetches sorting parameters contained in it.
 instance ( HasServer subApi ctx
-         , ReifySortingParams params
+         , ReifyParamsNames params
          ) =>
          HasServer (SortingParams params :> subApi) ctx where
     type ServerT (SortingParams params :> subApi) m =
@@ -157,7 +134,7 @@ instance ( HasServer subApi ctx
 
 -- | Parse 'sort_by' query param.
 -- Following the format described in "Sorting" section of https://www.moesif.com/blog/technical/api-design/REST-API-Design-Filtering-Sorting-and-Pagination/
-instance ReifySortingParams allowed =>
+instance ReifyParamsNames allowed =>
          FromHttpApiData (TaggedSortingItemsList allowed) where
     parseUrlPiece =
         first (toText . P.parseErrorPretty) . second Tagged .
@@ -188,7 +165,7 @@ instance ReifySortingParams allowed =>
                 return SortingItem{..}
             ]
 
-        allowedParams = reifySortingParamsNames @allowed
+        allowedParams = reifyParamsNames @allowed
 
         paramNameParser = do
             name <- P.takeWhile1P (Just "sorting item name") isAlphaNum <?> "parameter name"
@@ -198,7 +175,7 @@ instance ReifySortingParams allowed =>
             return name
 
 instance ( HasLoggingServer config subApi ctx
-         , ReifySortingParams params
+         , ReifyParamsNames params
          ) =>
          HasLoggingServer config (SortingParams params :> subApi) ctx where
     routeWithLog =

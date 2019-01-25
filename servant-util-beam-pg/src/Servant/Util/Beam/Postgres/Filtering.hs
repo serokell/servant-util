@@ -3,7 +3,7 @@ module Servant.Util.Beam.Postgres.Filtering
     , applyFilters
     ) where
 
-import Data.Typeable (cast, gcast1)
+import Data.Typeable (gcast, gcast1)
 import Universum
 
 import Database.Beam.Backend.SQL (HasSqlValueSyntax, IsSql92ExpressionSyntax,
@@ -78,8 +78,10 @@ typeFiltersSupport filtr v =
     ?: error "impossible, invariants of SomeTypeFilter are violated"
 
 -- | Some field participating in filtering.
-newtype FilteredField syntax s (param :: TyNamedParam *) =
-    FilteredField (QExpr syntax s (TyNamedParamType param))
+data FieldFiltering syntax s (param :: TyNamedParam *) = FieldFiltering
+    { ffField :: QExpr syntax s (TyNamedParamType param)
+
+    }
 
 {- | List of response fields we want to allow filtering on.
 
@@ -97,7 +99,7 @@ Annotating 'fieldFilter' call with parameter name is fully optional and used onl
 to visually disambiguate filters of the same types.
 -}
 type FilteringSpecApp syntax s params =
-    HList (FilteredField syntax s) params
+    HList (FieldFiltering syntax s) params
 
 -- | Applies some filter for some type to a given value, if their types match.
 class ApplyFilter' syntax s params where
@@ -114,9 +116,10 @@ instance ( TypeFiltersSupport syntax s a
          , ApplyFilter' syntax s params
          ) =>
          ApplyFilter' syntax s ('TyNamedParam name a ': params) where
-    applyFilter' (FilteredField field `HCons` fields) (SomeFilter filtr) = asum
+    applyFilter' (FieldFiltering field `HCons` fields) (SomeFilter filtr) = asum
         [ do
-          filter' <- cast filtr
+          -- TODO: lookup filter by name, not type!
+          filter' <- gcast @_ @a filtr
           return $ typeFiltersSupport filter' field
 
         , applyFilter' @syntax @s @params fields (SomeFilter filtr)
@@ -146,5 +149,5 @@ applyFilters (FilteringSpec filters) app =
 -- | Make a 'FilteredField'.
 fieldFilter_
     :: forall name a syntax s.
-       QExpr syntax s a -> FilteredField syntax s ('TyNamedParam name a)
-fieldFilter_ = FilteredField
+       QExpr syntax s a -> FieldFiltering syntax s ('TyNamedParam name a)
+fieldFilter_ = FieldFiltering

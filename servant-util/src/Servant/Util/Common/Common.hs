@@ -17,7 +17,7 @@ import qualified Data.Set as S
 import Universum
 
 import qualified Data.Text.Buildable as B
-import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
+import GHC.TypeLits (ErrorMessage (..), KnownSymbol, Symbol, TypeError, symbolVal)
 import Servant.API ((:>), Capture, QueryFlag, QueryParam, ReqBody)
 import Servant.Server (Handler (..), HasServer (..), Server)
 import qualified Servant.Server.Internal as SI
@@ -95,7 +95,14 @@ class ReifyParamsNames (params :: [TyNamedParam *]) where
 instance ReifyParamsNames '[] where
     reifyParamsNames = mempty
 
-instance (KnownSymbol name, ReifyParamsNames params) =>
+instance (KnownSymbol name, ReifyParamsNames params, ParamsContainNoName params name) =>
          ReifyParamsNames ('TyNamedParam name p ': params) where
     reifyParamsNames =
         toText (symbolVal @name Proxy) `S.insert` reifyParamsNames @params
+
+type family ParamsContainNoName (params :: [TyNamedParam *]) name :: Constraint where
+    ParamsContainNoName '[] name = ()
+    ParamsContainNoName ('TyNamedParam name p ': params) name =
+        TypeError ('Text "Duplicate name in sorting parameters " ':$$: 'ShowType name)
+    ParamsContainNoName ('TyNamedParam name p ': params) name' =
+        ParamsContainNoName params name'
