@@ -11,6 +11,11 @@ module Servant.Util.Combinators.Sorting
     , SortingParamTypesOf
     , SortingParamsOf
     , SortingSpecOf
+
+    , SortingRequestItem
+    , asc, desc
+    , mkSortingSpec
+    , noSorting
     ) where
 
 import Universum
@@ -19,11 +24,15 @@ import Data.Char (isAlphaNum)
 import Data.Default (Default (..))
 import qualified Data.List as L
 import qualified Data.Set as S
+import qualified Data.Text as T
 import Fmt (Buildable (..), fmt)
-import Servant.API ((:>), FromHttpApiData (..), QueryParam)
+import GHC.Exts (IsList, fromList)
+import qualified GHC.Exts
+import GHC.TypeLits (ErrorMessage (..), KnownSymbol, Symbol, TypeError)
+import Servant.API ((:>), FromHttpApiData (..), QueryParam, ToHttpApiData (..))
 import Servant.Client.Core (Client, HasClient (..))
 import Servant.Server (HasServer (..), Tagged (..), unTagged)
-import Test.QuickCheck (Arbitrary (..), choose, elements, vectorOf)
+import Test.QuickCheck (Arbitrary (..), elements, infiniteList, shuffle, sublistOf)
 import Text.Megaparsec ((<?>))
 import qualified Text.Megaparsec as P
 import qualified Text.Megaparsec.Char as P
@@ -188,26 +197,6 @@ instance ( HasLoggingServer config subApi ctx
                                 "sorting: " : L.intersperse " " (map build params)
             in (addParamLogInfo paramLog paramsInfo, handler sorting)
 
--- | We do not yet support passing sorting parameters in client.
-instance HasClient m subApi =>
-         HasClient m (SortingParams params :> subApi) where
-    type Client m (SortingParams params :> subApi) = Client m subApi
-    clientWithRoute mp _ req = clientWithRoute mp (Proxy @subApi) req
-
-instance Arbitrary SortingOrder where
-    arbitrary = elements [Ascendant, Descendant]
-
-instance ReifyParamsNames params =>
-         Arbitrary (SortingSpec params) where
-    arbitrary = do
-        let allowedNames = reifyParamsNames @params
-        let n = S.size allowedNames
-        k <- choose (0, n)
-        fmap SortingSpec . vectorOf k $ do
-            siName <- elements (toList allowedNames)
-            siOrder <- arbitrary
-            return SortingItem{..}
-
 -- | For a given return type of an endpoint get corresponding sorting params.
 -- This mapping is sensible, since we usually allow to sort only on fields appearing in
 -- endpoint's response.
@@ -218,3 +207,103 @@ type SortingParamsOf a = SortingParams (SortingParamTypesOf a)
 
 -- | This you will most probably want to specify in an endpoint implementation.
 type SortingSpecOf a = SortingSpec (SortingParamTypesOf a)
+
+----------------------------------------------------------------------------
+-- Client part
+----------------------------------------------------------------------------
+
+-- | Helper for defining custom 'SortingSpec's,
+-- contains 'SortingItem' corresponding to one of parameter in @params@.
+newtype SortingRequestItem (params :: [TyNamedParam *]) = SortingRequestItem
+    { unSortingRequestItem :: SortingItem
+    } deriving (Show)
+
+type family KnownTypeName
+    (origParams :: [TyNamedParam *])
+    (name :: Symbol)
+    (params :: [TyNamedParam *])
+        :: Constraint where
+    KnownTypeName orig name '[] =
+        TypeError ('Text "Parameter " ':<>: 'ShowType name ':<>: 'Text " is not allowed here"
+                   ':$$: 'Text "Available fields to sort on: " ':<>:
+                         'ShowType (TyNamedParamsNames orig))
+    KnownTypeName _ name ('TyNamedParam name _ ': _) = (KnownSymbol name)
+    KnownTypeName orig name ('TyNamedParam name0 _ ': params) = KnownTypeName orig name params
+
+-- | Ascendant sorting on a field with given name.
+asc
+    :: forall name params.
+       (KnownSymbol name, KnownTypeName params name params)
+    => NameLabel name -> SortingRequestItem params
+asc _ = SortingRequestItem SortingItem
+      { siName = symbolValT @name
+      , siOrder = Ascendant
+      }
+
+-- | Ascendant sorting on a field with given name.
+desc
+    :: forall name params.
+       (KnownSymbol name, KnownTypeName params name params)
+    => NameLabel name -> SortingRequestItem params
+desc _ = SortingRequestItem SortingItem
+      { siName = symbolValT @name
+      , siOrder = Descendant
+      }
+
+instance IsList (SortingSpec params) where
+    type Item (SortingSpec params) = SortingRequestItem params
+    toList = map SortingRequestItem . unSortingSpec
+    fromList = SortingSpec . map unSortingRequestItem
+
+{- | Make a sorting specification.
+Specified list should contain sorting on distinct fields; we do not enforce this
+at type-level for convenience.
+
+Example:
+
+@
+{-# LANGUAGE OverloadedLabels #-}
+
+sortingSpec :: SortingSpec ["id" ?: Int, "desc" ?: Text]
+sortingSpec = mkSortingSpec [asc #id]
+@
+
+-}
+mkSortingSpec :: [SortingRequestItem params] -> SortingSpec params
+mkSortingSpec = fromList
+
+-- | Do not specify ordering.
+noSorting :: SortingSpec params
+noSorting = mkSortingSpec []
+
+instance ToHttpApiData (TaggedSortingItemsList allowed) where
+    toUrlPiece (Tagged sorting) =
+        T.intercalate "," $ sorting <&> \SortingItem{..} ->
+             let order = case siOrder of
+                     Ascendant  -> "asc"
+                     Descendant -> "desc"
+             in order <> "(" <> siName <> ")"
+
+----------------------------------------------------------------------------
+-- Misc
+----------------------------------------------------------------------------
+
+instance HasClient m subApi =>
+         HasClient m (SortingParams params :> subApi) where
+    type Client m (SortingParams params :> subApi) =
+        SortingSpec params -> Client m subApi
+    clientWithRoute mp _ req (SortingSpec sorting) =
+        clientWithRoute mp (Proxy @(SortParamsExpanded params subApi)) req
+            (Just $ Tagged sorting)
+
+instance Arbitrary SortingOrder where
+    arbitrary = elements [Ascendant, Descendant]
+
+instance ReifyParamsNames params => Arbitrary (SortingSpec params) where
+    arbitrary = do
+        let names = toList $ reifyParamsNames @params
+        someNames <- sublistOf =<< shuffle names
+        orders <- infiniteList
+        let sortItems = zipWith SortingItem someNames orders
+        return (SortingSpec sortItems)
+    shrink = map SortingSpec . reverse . inits . unSortingSpec

@@ -6,12 +6,14 @@ module Servant.Util.Common.Common
 
     , inRouteServer
     , symbolValT
+
+    , NameLabel (..)
     ) where
 
 import Universum
 
 import qualified Data.Text.Buildable as B
-import GHC.TypeLits (KnownSymbol, symbolVal)
+import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
 import Servant.API ((:>), Capture, QueryFlag, QueryParam, ReqBody)
 import Servant.Server (Handler (..), HasServer (..), Server)
 import qualified Servant.Server.Internal as SI
@@ -71,3 +73,11 @@ inRouteServer routing f = \_ ctx delayed -> routing Proxy ctx (fmap f delayed)
 -- | Similar to 'symbolVal', but shorter in use.
 symbolValT :: forall s. KnownSymbol s => Text
 symbolValT = fromString $ symbolVal (Proxy @s)
+
+-- | Helper for passing type-level symbol at term-level.
+-- We do not use 'Proxy' for this because defining
+-- @instance IsLabel name (Proxy name)@ in a library is not a really good idea.
+data NameLabel (name :: Symbol) = NameLabel
+
+instance (n1 ~ n2) => IsLabel n1 (NameLabel n2) where
+    fromLabel = NameLabel
