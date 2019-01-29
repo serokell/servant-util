@@ -11,6 +11,7 @@ module Servant.Util.Logging
     , ApiHasArgClass (..)
     , ApiCanLogArg (..)
     , addParamLogInfo
+    , serverWithLogging
     ) where
 
 import Universum hiding (log)
@@ -18,7 +19,7 @@ import Universum hiding (log)
 import Control.Exception.Safe (handleAny)
 import Control.Monad.Error.Class (catchError, throwError)
 import Data.Default (Default (..))
-import Data.Reflection (Reifies (..))
+import Data.Reflection (Reifies (..), reify)
 import qualified Data.Text as T
 import qualified Data.Text.Buildable as B
 import qualified Data.Text.Lazy.Builder as B
@@ -359,3 +360,14 @@ instance Buildable (ForResponseLog ()) where
 
 instance Buildable (ForResponseLog Integer) where
     build = buildForResponse
+
+-- | Apply logging to the given server.
+serverWithLogging
+    :: forall api a.
+       ServantLogConfig
+    -> Proxy api
+    -> (forall config. Reifies config ServantLogConfig =>
+                       Proxy (LoggingApi config api) -> a)
+    -> a
+serverWithLogging config _ f =
+    reify config $ \(Proxy :: Proxy config) -> f (Proxy @(LoggingApi config api))

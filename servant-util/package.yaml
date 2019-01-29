@@ -40,6 +40,12 @@ executables:
     <<: *exec-common
     source-dirs:         examples
 
+    dependencies:
+      - aeson
+      - servant-util
+      - warp
+      - wai-extra
+
 tests:
   servant-util-test:
     <<: *test-common
