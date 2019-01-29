@@ -1,5 +1,5 @@
 -- | Allows to enable logging of requests and responses.
-module Servant.Util.Logging
+module Servant.Util.Combinators.Logging
     ( -- * Automatic requests logging
       LoggingApi
     , LoggingApiRec

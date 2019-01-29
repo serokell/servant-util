@@ -11,7 +11,8 @@ import Universum
 import Database.Beam.Query (Q, limit_, offset_)
 import Database.Beam.Query.Internal (QNested)
 
-import Servant.Util.Pagination
+import Servant.Util.Combinators.Pagination
+import Servant.Util.Internal.Util
 
 -- | Truncate response according to the given pagination specification.
 paginate_
@@ -20,4 +21,10 @@ paginate_
     -> Q select db (QNested (QNested s)) a
     -> Q select db s _
 paginate_ PaginationSpec{..} =
-     limit_ (fromIntegral psLimit) . offset_ (fromIntegral psOffset)
+    limit_ (maybe maxLimit (fromIntegral . unPositive) psLimit) .
+    offset_ (fromIntegral psOffset)
+  where
+    -- We cannot just omit 'limit_' (types won't match),
+    -- negative value does not work as well.
+    -- So applying max value which can be passed to limit.
+    maxLimit = fromIntegral (maxBound @Int64)

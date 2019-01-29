@@ -1,7 +1,8 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Servant.Util.Internal.Util
-    ( IsNotZero
+    ( Positive (..)
+    , IsNotZero
     , KnownPositive
     , positiveVal
     ) where
@@ -9,8 +10,15 @@ module Servant.Util.Internal.Util
 import Universum
 
 import GHC.TypeLits (ErrorMessage (..), KnownNat, Nat, TypeError)
-import Numeric.Positive (Positive)
 import Servant (FromHttpApiData (..), ToHttpApiData (..))
+
+newtype Positive a = PositiveUnsafe { unPositive :: a }
+    deriving (Show, Eq, Ord)
+
+toPositive :: (Show a, Ord a, Num a) => a -> Either Text (Positive a)
+toPositive a
+    | a > 0 = Right $ PositiveUnsafe a
+    | otherwise = Left $ "Value is negative: " <> show a
 
 type family IsNotZero (k :: Nat) :: Constraint where
     IsNotZero 0 = TypeError ('Text "Null is now allowed here")
@@ -18,14 +26,11 @@ type family IsNotZero (k :: Nat) :: Constraint where
 
 type KnownPositive k = (KnownNat k, IsNotZero k)
 
-positiveVal :: forall k. (KnownPositive k) => Positive
-positiveVal = fromIntegral $ natVal @k Proxy
+positiveVal :: forall k i. (KnownPositive k, Num i) => Positive i
+positiveVal = PositiveUnsafe . fromIntegral $ natVal @k Proxy
 
-instance FromHttpApiData Positive where
-    parseUrlPiece t =
-        parseUrlPiece @Natural t >>= \case
-            0 -> Left "Zero is not allowed"
-            k -> Right (fromIntegral k)
+instance (FromHttpApiData a, Show a, Ord a, Num a) => FromHttpApiData (Positive a) where
+    parseUrlPiece t = parseUrlPiece @a t >>= toPositive
 
-instance ToHttpApiData Positive where
-    toUrlPiece = toUrlPiece @Natural . fromIntegral
+instance ToHttpApiData a => ToHttpApiData (Positive a) where
+    toUrlPiece = toUrlPiece @a . unPositive

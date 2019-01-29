@@ -6,6 +6,5 @@ packages:
 
 extra-deps:
 - beam-postgres-0.3.2.2
-- positive-0.4.1
 - pretty-terminal-0.1.0.0
 - universum-1.1.0

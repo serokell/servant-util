@@ -1,5 +1,5 @@
 -- | Provides combinator for lexicographical sorting.
-module Servant.Util.Sorting
+module Servant.Util.Combinators.Sorting
     ( SortingParams
     , TyNamedParam (..)
     , type (?:)
@@ -30,8 +30,8 @@ import Text.Megaparsec ((<?>))
 import qualified Text.Megaparsec as P
 import qualified Text.Megaparsec.Char as P
 
+import Servant.Util.Combinators.Logging
 import Servant.Util.Common
-import Servant.Util.Logging
 
 -- | Pair of type and its name as it appears in API.
 data TyNamedParam a = TyNamedParam Symbol a
