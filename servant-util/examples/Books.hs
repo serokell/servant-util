@@ -51,7 +51,7 @@ warpSettings = Warp.defaultSettings
     & Warp.setPort 8090
 
 instance Buildable Isbn where
-    build (Isbn i) = "isbn: " <> build i
+    build (Isbn i) = "isbn:" <> build i
 
 instance Buildable Password where
     build _ = "<password>"

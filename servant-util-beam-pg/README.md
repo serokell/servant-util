@@ -18,7 +18,7 @@ type instance SortingParamTypesOf Book =
     ["isbn" ?: Word64, "name" ?: Text]
 
 type GetBooks
-    >: SortingParamsOf Book
+    :> SortingParamsOf Book
     =  Get '[JSON] [Book]
 
 ```
@@ -40,11 +40,12 @@ Implementation will look like
 
 ```haskell
 
+import Servant.Util (SortingSpecOf)
 import Servant.Util.Beam.Postgres (bySpec_, fieldSort_)
 
 -- some code
 
-getBooks :: SortingSpecOf Book -> [Book]
+getBooks :: _ => SortingSpecOf Book -> m [Book]
 getBooks sorting =
     runInsert . select $
         orderBy_ (bySpec_ sorting . sortingApp) $
@@ -66,6 +67,10 @@ and schema definition mismatch.
 
 Annotating `fieldSort_` calls with a field name is fully optional but may save you in case
 when several fields of the same type participate in sorting.
+
+### Pagination
+
+Pagination can be appled simply with `paginate_` function.
 
 ## For Contributors [↑](#-patak)
 

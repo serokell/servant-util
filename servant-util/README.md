@@ -78,7 +78,7 @@ For example, `GetBooks` from the example above can be extended as
 ```haskell
 
 type GetBooks
-    >: SortingParams ["isbn" ?: Word64, "name" ?: Text]
+    :> SortingParams ["isbn" ?: Word64, "name" ?: Text]
     =  Get '[JSON] [Book]
 
 ```
@@ -108,8 +108,34 @@ type instance SortingParamTypesOf Book =
     ["isbn" ?: Word64, "name" ?: Text]
 
 type GetBooks
-    >: SortingParamsOf Book  -- same as `SortingParams (SortingParamTypesOf Book)`
+    :> SortingParamsOf Book  -- same as `SortingParams (SortingParamTypesOf Book)`
     =  Get '[JSON] [Book]
+
+```
+
+### Pagination
+
+Pagination is applied via `PaginationParams` combinator. It accepts a settings type argument,
+which is currently just `DefPageSize n` type; this is required in order for default page
+size to be reflected in documentation.
+
+Endpoint supplied with this combinator starts to accept `offset` and `limit` query
+parameters, both are optional.
+
+Your endpoint implementation will be given a `PaginationSpec` object which can be applied
+with an appropriate function.
+
+```haskell
+
+import Servant.Util (PaginationParams, PaginationSpec)
+import Servant.Util.Dummy (paginate)
+
+type GetBooks
+    :> PaginationParams (DefPageSize 10)
+    =  Get '[JSON] [Book]
+
+getBooks :: _ => PaginationSpec -> m [Books]
+getBooks pagination = paginate pagination <$> getAllBooks
 
 ```
 
@@ -138,7 +164,7 @@ Note the problem: logs contain the password which makes them unusable in product
 
 And if we use
 [`logStdout`](http://hackage.haskell.org/package/wai-extra-3.0.25/docs/Network-Wai-Middleware-RequestLogger.html#v:logStdout),
-logs are missing the most part of request data:
+logs are missing the most part of the request data:
 
 ```
 127.0.0.1 - - [29/Jan/2019:02:32:31 +0300] "POST /books?password=qwerty123 HTTP/1.1" 201 -
@@ -185,9 +211,8 @@ instance Buildable Book where
 ```
 
 and `instance Buildable (ForResponseLog *)` for all types appearing as a response.
-Note that semantics of `ForResponseLog` newtype wrapper is displaying reasonable part of
-a response, not too little to stay informative but not too large in order not to litter
-logs.
+Note that semantics of `ForResponseLog` newtype wrapper is displaying a reasonable part of
+a response: not too little to stay informative, not too large in order to keep logs small.
 
 ```haskell
 
@@ -209,9 +234,9 @@ Now logs look like
 POST Request #1
     :> books
     :> 'password' field: <password>
-    :> request body: { isbn = isbn: 12312, title = Some book, author = unknown }
+    :> request body: { isbn = isbn:12312, title = Some book, author = unknown }
 
-    Response #1 OK 0.013415s > isbn: 12312
+    Response #1 OK 0.013415s > isbn:12312
 
 ```
 
