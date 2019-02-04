@@ -8,3 +8,6 @@ extra-deps:
 - beam-postgres-0.3.2.2
 - pretty-terminal-0.1.0.0
 - universum-1.1.0
+
+nix:
+  packages: [zlib, postgresql]
