@@ -80,7 +80,9 @@ instance ( HasLoggingServer config subApi ctx
         \(paramsInfo, handler) pagination@PaginationSpec{..} ->
             let text = T.intercalate ", " . catMaybes $
                   [ guard (psOffset > 0) $> ("offset " <> show psOffset)
-                  , Just $ show psLimit <> " per page"
+                  , fmap @Maybe
+                      (\limit -> show (unPositive limit) <> " per page")
+                      psLimit
                   ]
             in (addParamLogInfo text paramsInfo, handler pagination)
 
