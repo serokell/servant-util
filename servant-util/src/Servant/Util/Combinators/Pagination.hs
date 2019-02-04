@@ -1,7 +1,6 @@
 -- | Provides pagination API combinator.
 module Servant.Util.Combinators.Pagination
     ( PaginationParams
-    , PaginationSettings (..)
     , PaginationSpec (..)
     , fullContent
     , itemsOnPage
@@ -12,17 +11,12 @@ import Universum
 
 import Data.Default (Default (..))
 import qualified Data.Text as T
-import GHC.TypeLits (Nat)
 import Servant ((:>), HasServer (..), QueryParam)
 import Servant.Client (HasClient (..))
 
 import Servant.Util.Combinators.Logging
 import Servant.Util.Common
 import Servant.Util.Internal.Util
-
--- | Settings used to define default number of items per page.
-data PaginationSettings
-    = DefPageSize Nat
 
 -- | API combinator which enables pagination.
 --
@@ -32,7 +26,7 @@ data PaginationSettings
 --
 -- Your endpoint implementation will be provided with 'PaginationSpec' variable
 -- which will contain parameters provided by the user.
-data PaginationParams (settings :: PaginationSettings)
+data PaginationParams
 
 -- | Contains pagination parameters provided by the user.
 -- 'psLimit' field cannot be limit.
@@ -41,8 +35,6 @@ data PaginationSpec = PaginationSpec
       -- ^ How many elements to skip.
     , psLimit  :: Maybe (Positive Natural)
       -- ^ Maximum number of elements to remain.
-      -- Note that for servant-provided 'PaginationSpec' object this field is
-      -- always 'Just'. 'Nothing' is used for testing purposes only.
     }
 
 -- | How servant sees 'PaginationParams' under the hood.
@@ -51,12 +43,8 @@ type PaginationParamsExpanded subApi =
     QueryParam "limit" (Positive Natural) :>
     subApi
 
-instance ( HasServer subApi ctx
-         , settings ~ 'DefPageSize defPageSize
-         , KnownPositive defPageSize
-         ) =>
-         HasServer (PaginationParams settings :> subApi) ctx where
-    type ServerT (PaginationParams settings :> subApi) m =
+instance HasServer subApi ctx => HasServer (PaginationParams :> subApi) ctx where
+    type ServerT (PaginationParams :> subApi) m =
         PaginationSpec -> ServerT subApi m
 
     route =
@@ -64,19 +52,16 @@ instance ( HasServer subApi ctx
         \handler offset limit ->
             handler PaginationSpec
             { psOffset = offset ?: 0
-            , psLimit = Just $ limit ?: positiveVal @defPageSize
+            , psLimit = limit
             }
 
     hoistServerWithContext _ pc nt s =
         hoistServerWithContext (Proxy @subApi) pc nt . s
 
-instance ( HasLoggingServer config subApi ctx
-         , settings ~ 'DefPageSize defPageSize
-         , KnownPositive defPageSize
-         ) =>
-         HasLoggingServer config (PaginationParams settings :> subApi) ctx where
+instance HasLoggingServer config subApi ctx =>
+         HasLoggingServer config (PaginationParams :> subApi) ctx where
     routeWithLog =
-        inRouteServer @(PaginationParams settings :> LoggingApiRec config subApi) route $
+        inRouteServer @(PaginationParams :> LoggingApiRec config subApi) route $
         \(paramsInfo, handler) pagination@PaginationSpec{..} ->
             let text = T.intercalate ", " . catMaybes $
                   [ guard (psOffset > 0) $> ("offset " <> show psOffset)
@@ -104,8 +89,8 @@ instance Default PaginationSpec where
     def = fullContent
 
 instance HasClient m subApi =>
-         HasClient m (PaginationParams settings :> subApi) where
-    type Client m (PaginationParams settings :> subApi) =
+         HasClient m (PaginationParams :> subApi) where
+    type Client m (PaginationParams :> subApi) =
         PaginationSpec -> Client m subApi
 
     clientWithRoute mp _ req PaginationSpec{..} =
