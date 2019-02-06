@@ -14,7 +14,7 @@ import Universum
 
 import qualified Data.Text.Buildable as B
 import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
-import Servant.API ((:>), Capture, QueryFlag, QueryParam, ReqBody)
+import Servant.API ((:>), Capture, QueryFlag, QueryParam', ReqBody)
 import Servant.Server (Handler (..), HasServer (..), Server)
 import qualified Servant.Server.Internal as SI
 
@@ -53,8 +53,8 @@ type ApiHasArg subApi res =
     )
 
 instance KnownSymbol s => ApiHasArgClass (Capture s a)
-instance KnownSymbol s => ApiHasArgClass (QueryParam s a) where
-    type ApiArg (QueryParam s a) = Maybe a
+instance KnownSymbol s => ApiHasArgClass (QueryParam' mods s a) where
+    type ApiArg (QueryParam' mods s a) = Maybe a
 instance KnownSymbol s => ApiHasArgClass (QueryFlag s) where
     type ApiArg (QueryFlag s) = Bool
     apiArgName _ =

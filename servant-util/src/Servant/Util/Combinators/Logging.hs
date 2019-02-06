@@ -28,7 +28,7 @@ import Data.Time.Clock.POSIX (getPOSIXTime)
 import Fmt (blockListF, (+|), (|+), (||+))
 import GHC.IO.Unsafe (unsafePerformIO)
 import GHC.TypeLits (KnownSymbol, symbolVal)
-import Servant.API ((:<|>) (..), (:>), Capture, Description, NoContent, QueryFlag, QueryParam,
+import Servant.API ((:<|>) (..), (:>), Capture, Description, NoContent, QueryFlag, QueryParam',
                     ReflectMethod (..), ReqBody, Summary, Verb)
 import Servant.Server (Handler (..), HasServer (..), ServantErr (..), Server)
 import qualified Servant.Server.Internal as SI
@@ -185,8 +185,8 @@ instance KnownSymbol s => ApiCanLogArg (Capture s a)
 
 instance ApiCanLogArg (ReqBody ct a)
 
-instance KnownSymbol cs => ApiCanLogArg (QueryParam cs a) where
-    type ApiArgToLog (QueryParam cs a) = a
+instance KnownSymbol cs => ApiCanLogArg (QueryParam' mods cs a) where
+    type ApiArgToLog (QueryParam' mods cs a) = a
     toLogParamInfo _ mparam = maybe noEntry pretty mparam
       where
         noEntry = gray "-"
