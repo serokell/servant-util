@@ -1,13 +1,17 @@
 {-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE TypeInType #-}
 
 -- | Allows complex filtering on specified fields.
 module Servant.Util.Filtering
-    ( FilteringParams
+    ( FilterKind (..)
+    , TyNamedFilter
+    , FilteringParams
     , SupportedFilters
-    , IsFilter (..)
+    , IsAutoFilter (..)
     , SomeTypeFilter (..)
     , SomeFilter (..)
     , FilteringSpec (..)
+    , mapSomeTypeFilter
 
      -- * Filter types
     , FilterMatching (..)
@@ -28,6 +32,7 @@ import Universum
 
 import qualified Data.Text as T
 import Servant.Client (HasClient (..))
+import Data.Kind (type (*))
 import Servant (HasServer (..), (:>), FromHttpApiData(..), err400, ServantErr(..))
 import Network.Wai.Internal (rawQueryString)
 import Servant.Server.Internal (addParameterCheck, withRequest, delayedFailFatal)
@@ -40,7 +45,17 @@ import GHC.TypeLits (KnownSymbol)
 import Servant.Util.Common
 
 -- TODO: map values we filter on
--- TODO: Auto filters and Manual filters
+
+-- | We support two kinds of filters.
+data FilterKind a
+    = AutoFilter a
+      -- ^ Automatic filter where different operations are supported (eq, in, cmp).
+      -- When applied to backend, only filtered value should be supplied.
+    | ManualFilter a
+      -- ^ User-provided value is passed to backend implementation as-is,
+      -- and filtering on this value should be written manually.
+
+type TyNamedFilter = TyNamedParam (FilterKind *)
 
 -- | Servant API combinator which enables filtering on given fields.
 --
@@ -57,7 +72,7 @@ import Servant.Util.Common
 -- Endpoint implementation will receive 'FilteringSpec' value which contains information
 -- about all filters passed by user. You can later put it to an appropriate function
 -- to apply filtering.
-data FilteringParams (params :: [TyNamedParam *])
+data FilteringParams (params :: [TyNamedFilter])
 
 -- | For a type of field, get a list of supported filtering operations on this field.
 type family SupportedFilters ty :: [* -> *]
@@ -103,21 +118,21 @@ parseFilteringValueAsIs :: FromHttpApiData a => FilteringValueParser a
 parseFilteringValueAsIs = FilteringValueParser parseUrlPiece
 
 -- | Application of a filter type to Servant API.
-class Typeable filter => IsFilter (filter :: * -> *) where
+class Typeable filter => IsAutoFilter (filter :: * -> *) where
     -- | For each supported filtering operation specifies parser for a filtering value.
-    filterParsers
+    autoFilterParsers
         :: FromHttpApiData a
         => Proxy filter -> Map Text $ FilteringValueParser (filter a)
 
-    mapFilterValue
+    mapAutoFilterValue
         :: (a -> b) -> filter a -> filter b
 
 -- | If no filtering command specified, think like if the given one was passed.
 defFilteringCmd :: Text
 defFilteringCmd = "eq"
 
-instance IsFilter FilterMatching where
-    filterParsers _ = M.fromList
+instance IsAutoFilter FilterMatching where
+    autoFilterParsers _ = M.fromList
         [ ( defFilteringCmd
           , FilterMatching <$> parseFilteringValueAsIs
           )
@@ -135,10 +150,10 @@ instance IsFilter FilterMatching where
             let vals = T.splitOn "," text'
             mapM parseUrlPiece vals
 
-    mapFilterValue = fmap
+    mapAutoFilterValue = fmap
 
-instance IsFilter FilterComparing where
-    filterParsers _ = M.fromList
+instance IsAutoFilter FilterComparing where
+    autoFilterParsers _ = M.fromList
         [ ( "gt"
           , FilterGT <$> parseFilteringValueAsIs
           )
@@ -153,10 +168,10 @@ instance IsFilter FilterComparing where
           )
         ]
 
-    mapFilterValue = fmap
+    mapAutoFilterValue = fmap
 
--- instance IsFilter FilterOnLikeTemplate where
---     filterParsers _ = M.fromList
+-- instance IsAutoFilter FilterOnLikeTemplate where
+--     autoFilterParsers _ = M.fromList
 --         [ ( "like"
 --           , undefined
 
@@ -164,32 +179,38 @@ instance IsFilter FilterComparing where
 --         ]
 
 -- | Multi-version of 'IsFilter'.
-class AreFilters (filters :: [* -> *]) where
+class AreAutoFilters (filters :: [* -> *]) where
     mapFilterTypes
-        :: (forall filter. IsFilter filter => Proxy filter -> a)
+        :: (forall filter. IsAutoFilter filter => Proxy filter -> a)
         -> Proxy filters -> [a]
 
-instance AreFilters '[] where
+instance AreAutoFilters '[] where
     mapFilterTypes _ _ = []
 
-instance (IsFilter filter, AreFilters filters) =>
-         AreFilters (filter ': filters) where
+instance (IsAutoFilter filter, AreAutoFilters filters) =>
+         AreAutoFilters (filter ': filters) where
     mapFilterTypes mapper _ =
         mapper (Proxy @filter) : mapFilterTypes mapper (Proxy @filters)
 
 -- | Some filter for an item of type @a@.
 -- Filter type is guaranteed to be one of @SupportedFilters a@.
-data SomeTypeFilter a = forall filter. IsFilter filter => SomeTypeFilter (filter a)
+data SomeTypeFilter a
+    = forall filter. IsAutoFilter filter => SomeTypeAutoFilter (filter a)
+      -- ^ One of automatic filters for type @a@.
+    | SomeTypeManualFilter a
+      -- ^ Manually implemented filter.
 
-_mapSomeTypeFilter :: (a -> b) -> SomeTypeFilter a -> SomeTypeFilter b
-_mapSomeTypeFilter f (SomeTypeFilter filtr) = SomeTypeFilter (mapFilterValue f filtr)
+mapSomeTypeFilter :: (a -> b) -> SomeTypeFilter a -> SomeTypeFilter b
+mapSomeTypeFilter f (SomeTypeAutoFilter filtr) = SomeTypeAutoFilter (mapAutoFilterValue f filtr)
+mapSomeTypeFilter f (SomeTypeManualFilter v) = SomeTypeManualFilter (f v)
 
-filtersParsers
+autoFiltersParsers
     :: forall filters a.
-       (AreFilters filters, FromHttpApiData a)
+       (AreAutoFilters filters, FromHttpApiData a)
     => Map Text $ FilteringValueParser (SomeTypeFilter a)
-filtersParsers =
-    let parsers = mapFilterTypes (fmap (fmap SomeTypeFilter) . filterParsers) (Proxy @filters)
+autoFiltersParsers =
+    let parsers = mapFilterTypes (fmap (fmap SomeTypeAutoFilter) . autoFilterParsers)
+                                 (Proxy @filters)
     in foldl' (M.unionWithKey onDuplicateCmd) mempty parsers
   where
     onDuplicateCmd cmd = error $ "Different filters have the same command " <> show cmd
@@ -197,11 +218,11 @@ filtersParsers =
 -- | Try to parse given query parameter as filter applicable to type @a@.
 -- If the parameter is not recognized as filtering one, 'Nothing' is returned.
 -- Otherwise it is parsed and any potential errors are reported as-is.
-parseTypeFilteringParam
+parseAutoTypeFilteringParam
     :: forall a (filters :: [* -> *]).
-       (filters ~ SupportedFilters a, AreFilters filters, FromHttpApiData a)
+       (filters ~ SupportedFilters a, AreAutoFilters filters, FromHttpApiData a)
     => Text -> Text -> Text -> Maybe (Either Text $ SomeTypeFilter a)
-parseTypeFilteringParam field key val =
+parseAutoTypeFilteringParam field key val =
     let (field', remainder) = T.break (== '[') key
     in guard (field == field') $> do
         mop <- if null remainder
@@ -211,7 +232,7 @@ parseTypeFilteringParam field key val =
                      T.stripSuffix "]" remainder
 
         let op = mop ?: defFilteringCmd
-        let parsersPerOp = filtersParsers @filters @a
+        let parsersPerOp = autoFiltersParsers @filters @a
         let allowedOps = M.keys parsersPerOp
 
         FilteringValueParser parser <- case M.lookup op parsersPerOp of
@@ -221,11 +242,11 @@ parseTypeFilteringParam field key val =
             Just parser -> pure parser
 
         parser val
-{-# INLINE parseTypeFilteringParam #-}
+{-# INLINE parseAutoTypeFilteringParam #-}
 
 -- | Some filter.
 -- This filter is guaranteed to match a type which is mentioned in @params@.
-data SomeFilter (params :: [TyNamedParam *]) where
+data SomeFilter (params :: [TyNamedFilter]) where
     SomeFilter :: Typeable a =>
         { sfName :: Text
         , sfFilter :: SomeTypeFilter a
@@ -235,7 +256,7 @@ extendSomeFilter :: SomeFilter params -> SomeFilter (param ': params)
 extendSomeFilter (SomeFilter f n) = SomeFilter f n
 
 -- | Application of filter params.
-class AreFilteringParams (params :: [TyNamedParam *])  where
+class AreFilteringParams (params :: [TyNamedFilter])  where
     -- | Try to parser given query parameter as a filter corresponding to @params@
     -- configuration.
     -- If the query parameter is not recognized as filtering one, 'Nothing' is returned.
@@ -248,14 +269,32 @@ instance AreFilteringParams '[] where
 
 instance ( FromHttpApiData ty
          , Typeable ty
-         , AreFilters (SupportedFilters ty)
+         , AreAutoFilters (SupportedFilters ty)
          , KnownSymbol name
          , AreFilteringParams params
          ) =>
-         AreFilteringParams ('TyNamedParam name ty ': params) where
+         AreFilteringParams ('TyNamedParam name ('AutoFilter ty) ': params) where
     parseFilteringParam key val = asum
         [ fmap (fmap (SomeFilter name)) $
-            parseTypeFilteringParam @ty (symbolValT @name) key val
+            parseAutoTypeFilteringParam @ty (symbolValT @name) key val
+
+        , fmap (fmap extendSomeFilter) $
+            parseFilteringParam @params key val
+        ]
+      where
+        name = symbolValT @name
+    {-# INLINE parseFilteringParam #-}
+
+instance ( FromHttpApiData ty
+         , Typeable ty
+         , KnownSymbol name
+         , AreFilteringParams params
+         ) =>
+         AreFilteringParams ('TyNamedParam name ('ManualFilter ty) ': params) where
+    parseFilteringParam key val = asum
+        [ fmap (fmap (SomeFilter name)) $
+            guard (symbolValT @name == key) $> do
+                SomeTypeManualFilter <$> parseUrlPiece @ty val
 
         , fmap (fmap extendSomeFilter) $
             parseFilteringParam @params key val
@@ -265,7 +304,7 @@ instance ( FromHttpApiData ty
     {-# INLINE parseFilteringParam #-}
 
 extractQueryParamsFilters
-    :: forall (params :: [TyNamedParam *]).
+    :: forall (params :: [TyNamedFilter]).
        (AreFilteringParams params)
     => QueryText -> Either Text [SomeFilter params]
 extractQueryParamsFilters qt = sequence $ do
@@ -278,7 +317,8 @@ extractQueryParamsFilters qt = sequence $ do
 -- | This is what you get in endpoint implementation, it contains all filters
 -- supplied by a user.
 -- Invariant: each filter correspond to some type mentioned in @params@.
-data FilteringSpec (params :: [TyNamedParam *]) = FilteringSpec [SomeFilter params]
+data FilteringSpec (params :: [TyNamedFilter]) =
+    FilteringSpec [SomeFilter params]
 
 instance ( HasServer subApi ctx
          , AreFilteringParams params
@@ -312,7 +352,7 @@ instance HasClient m subApi =>
 -- | For a given return type of an endpoint get corresponding filtering params.
 -- This mapping is sensible, since we usually allow to filter only on fields appearing in
 -- endpoint's response.
-type family FilteringParamTypesOf a :: [TyNamedParam *]
+type family FilteringParamTypesOf a :: [TyNamedFilter]
 
 -- | This you will most probably want to specify in API.
 type FilteringParamsOf a = FilteringParams (FilteringParamTypesOf a)
