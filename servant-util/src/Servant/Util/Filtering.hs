@@ -181,8 +181,8 @@ instance (IsFilter filter, AreFilters filters) =>
 -- Filter type is guaranteed to be one of @SupportedFilters a@.
 data SomeTypeFilter a = forall filter. IsFilter filter => SomeTypeFilter (filter a)
 
-mapSomeTypeFilter :: (a -> b) -> SomeTypeFilter a -> SomeTypeFilter b
-mapSomeTypeFilter f (SomeTypeFilter filtr) = SomeTypeFilter (mapFilterValue f filtr)
+_mapSomeTypeFilter :: (a -> b) -> SomeTypeFilter a -> SomeTypeFilter b
+_mapSomeTypeFilter f (SomeTypeFilter filtr) = SomeTypeFilter (mapFilterValue f filtr)
 
 filtersParsers
     :: forall filters a.
@@ -225,11 +225,14 @@ parseTypeFilteringParam field key val =
 
 -- | Some filter.
 -- This filter is guaranteed to match a type which is mentioned in @params@.
-data SomeFilter (params :: [TyNamedParam *]) =
-    forall a. Typeable a => SomeFilter (SomeTypeFilter a)
+data SomeFilter (params :: [TyNamedParam *]) where
+    SomeFilter :: Typeable a =>
+        { sfName :: Text
+        , sfFilter :: SomeTypeFilter a
+        } -> SomeFilter params
 
 extendSomeFilter :: SomeFilter params -> SomeFilter (param ': params)
-extendSomeFilter (SomeFilter f) = SomeFilter f
+extendSomeFilter (SomeFilter f n) = SomeFilter f n
 
 -- | Application of filter params.
 class AreFilteringParams (params :: [TyNamedParam *])  where
@@ -251,12 +254,14 @@ instance ( FromHttpApiData ty
          ) =>
          AreFilteringParams ('TyNamedParam name ty ': params) where
     parseFilteringParam key val = asum
-        [ fmap (fmap SomeFilter) $
+        [ fmap (fmap (SomeFilter name)) $
             parseTypeFilteringParam @ty (symbolValT @name) key val
 
         , fmap (fmap extendSomeFilter) $
             parseFilteringParam @params key val
         ]
+      where
+        name = symbolValT @name
     {-# INLINE parseFilteringParam #-}
 
 extractQueryParamsFilters

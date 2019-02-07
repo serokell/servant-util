@@ -11,6 +11,7 @@ import Database.Beam.Backend.SQL (HasSqlValueSyntax, IsSql92ExpressionSyntax,
 import Database.Beam.Query (HasSqlEqualityCheck, in_, val_, (&&.), (/=.), (<.), (<=.), (==.), (>.),
                             (>=.))
 import Database.Beam.Query.Internal (QExpr)
+import GHC.TypeLits (KnownSymbol)
 
 import Servant.Util.Common
 import Servant.Util.Filtering
@@ -79,8 +80,7 @@ typeFiltersSupport filtr v =
 
 -- | Some field participating in filtering.
 data FieldFiltering syntax s (param :: TyNamedParam *) = FieldFiltering
-    { ffField :: QExpr syntax s (TyNamedParamType param)
-
+    { _ffField :: QExpr syntax s (TyNamedParamType param)
     }
 
 {- | List of response fields we want to allow filtering on.
@@ -113,16 +113,19 @@ instance ApplyFilter' syntax s '[] where
 
 instance ( TypeFiltersSupport syntax s a
          , Typeable a
+         , KnownSymbol name
          , ApplyFilter' syntax s params
          ) =>
          ApplyFilter' syntax s ('TyNamedParam name a ': params) where
-    applyFilter' (FieldFiltering field `HCons` fields) (SomeFilter filtr) = asum
+    applyFilter' (FieldFiltering field `HCons` fields) (SomeFilter name filtr) = asum
         [ do
           -- TODO: lookup filter by name, not type!
-          filter' <- gcast @_ @a filtr
-          return $ typeFiltersSupport filter' field
+          guard (symbolValT @name == name)
+          let filtr' = gcast @_ @a filtr
+                       ?: error "Something is wrong, failed to cast filter!"
+          return $ typeFiltersSupport filtr' field
 
-        , applyFilter' @syntax @s @params fields (SomeFilter filtr)
+        , applyFilter' @syntax @s @params fields (SomeFilter name filtr)
         ]
 
 -- | Applies a filter to a set of response fields which matter for filtering.
