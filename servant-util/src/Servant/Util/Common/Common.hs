@@ -6,18 +6,12 @@ module Servant.Util.Common.Common
 
     , inRouteServer
     , symbolValT
-
-    , TyNamedParam (..)
-    , type (?:)
-    , TyNamedParamType
-    , ReifyParamsNames (..)
     ) where
 
-import qualified Data.Set as S
 import Universum
 
 import qualified Data.Text.Buildable as B
-import GHC.TypeLits (ErrorMessage (..), KnownSymbol, Symbol, TypeError, symbolVal)
+import GHC.TypeLits (KnownSymbol, symbolVal)
 import Servant.API ((:>), Capture, QueryFlag, QueryParam, ReqBody)
 import Servant.Server (Handler (..), HasServer (..), Server)
 import qualified Servant.Server.Internal as SI
@@ -77,32 +71,3 @@ inRouteServer routing f = \_ ctx delayed -> routing Proxy ctx (fmap f delayed)
 -- | Similar to 'symbolVal', but shorter in use.
 symbolValT :: forall s. KnownSymbol s => Text
 symbolValT = fromString $ symbolVal (Proxy @s)
-
--- | Pair of type and its name as it appears in API.
-data TyNamedParam a = TyNamedParam Symbol a
-
--- | Convenient type alias for 'TyNamedParam'.
-type (?:) = 'TyNamedParam
-
-type family TyNamedParamType p where
-    TyNamedParamType ('TyNamedParam _ a) = a
-
--- | Extract info from 'SortingParams'.
-class ReifyParamsNames (params :: [TyNamedParam *]) where
-    -- | Get all expected parameter names.
-    reifyParamsNames :: Set Text
-
-instance ReifyParamsNames '[] where
-    reifyParamsNames = mempty
-
-instance (KnownSymbol name, ReifyParamsNames params, ParamsContainNoName params name) =>
-         ReifyParamsNames ('TyNamedParam name p ': params) where
-    reifyParamsNames =
-        toText (symbolVal @name Proxy) `S.insert` reifyParamsNames @params
-
-type family ParamsContainNoName (params :: [TyNamedParam *]) name :: Constraint where
-    ParamsContainNoName '[] name = ()
-    ParamsContainNoName ('TyNamedParam name p ': params) name =
-        TypeError ('Text "Duplicate name in sorting parameters " ':$$: 'ShowType name)
-    ParamsContainNoName ('TyNamedParam name p ': params) name' =
-        ParamsContainNoName params name'
