@@ -2,7 +2,7 @@
 {-# LANGUAGE TypeInType #-}
 
 -- | Allows complex filtering on specified fields.
-module Servant.Util.Filtering
+module Servant.Util.Combinators.Filtering
     ( FilterKind (..)
     , TyNamedFilter
     , FilteringParams

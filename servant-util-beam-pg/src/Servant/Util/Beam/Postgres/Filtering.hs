@@ -17,8 +17,8 @@ import Database.Beam.Query (HasSqlEqualityCheck, in_, val_, (&&.), (/=.), (<.), 
 import Database.Beam.Query.Internal (QExpr)
 import GHC.TypeLits (KnownSymbol)
 
+import Servant.Util.Combinators.Filtering
 import Servant.Util.Common
-import Servant.Util.Filtering
 
 
 -- | Logic behind a filter which we can provide for user.
