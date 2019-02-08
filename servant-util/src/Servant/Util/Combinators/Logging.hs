@@ -94,7 +94,7 @@ buildListForResponse truncList (ForResponseLog l) =
         diff = length l - length lt
         mMore | diff == 0 = ""
               | otherwise = "\n    and " +| diff |+ " entries more..."
-    in  blockListF (map ForResponseLog lt) |+ mMore
+    in  "\n" +| blockListF (map ForResponseLog lt) |+ mMore
 
 buildForResponse :: Buildable a => ForResponseLog a -> B.Builder
 buildForResponse = B.build . unForResponseLog

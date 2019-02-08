@@ -63,13 +63,17 @@ instance HasLoggingServer config subApi ctx =>
     routeWithLog =
         inRouteServer @(PaginationParams :> LoggingApiRec config subApi) route $
         \(paramsInfo, handler) pagination@PaginationSpec{..} ->
-            let text = T.intercalate ", " . catMaybes $
+            let text = merge . catMaybes $
                   [ guard (psOffset > 0) $> ("offset " <> show psOffset)
                   , fmap @Maybe
                       (\limit -> show (unPositive limit) <> " per page")
                       psLimit
                   ]
             in (addParamLogInfo text paramsInfo, handler pagination)
+      where
+        merge ts
+            | null ts = "no pagination"
+            | otherwise = T.intercalate ", " ts
 
 -- | Do not paginate anything.
 fullContent :: PaginationSpec

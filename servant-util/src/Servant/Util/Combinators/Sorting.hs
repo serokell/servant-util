@@ -181,8 +181,11 @@ instance ( HasLoggingServer config subApi ctx
     routeWithLog =
         inRouteServer @(SortingParams params :> LoggingApiRec config subApi) route $
         \(paramsInfo, handler) sorting@(SortingSpec params) ->
-            let text = fmt . mconcat $ "sorting: " : L.intersperse " " (map build params)
-            in (addParamLogInfo text paramsInfo, handler sorting)
+            let paramLog
+                  | null params = "no sorting"
+                  | otherwise = fmt . mconcat $
+                                "sorting: " : L.intersperse " " (map build params)
+            in (addParamLogInfo paramLog paramsInfo, handler sorting)
 
 -- | We do not yet support passing sorting parameters in client.
 instance HasClient m subApi =>

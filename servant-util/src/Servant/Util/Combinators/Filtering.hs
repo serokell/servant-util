@@ -32,6 +32,9 @@ module Servant.Util.Combinators.Filtering
 import Universum
 
 import qualified Data.Text as T
+import Data.Typeable (gcast)
+import qualified Data.List as L
+import Fmt (Buildable (..), fmt, Builder, listF)
 import Servant.Client (HasClient (..))
 import Data.Kind (type (*))
 import Servant (HasServer (..), (:>), FromHttpApiData(..), err400, ServantErr(..))
@@ -45,6 +48,7 @@ import qualified Data.Map as M
 import GHC.TypeLits (KnownSymbol)
 
 import Servant.Util.Common
+import Servant.Util.Combinators.Logging
 
 -- TODO: map values we filter on
 
@@ -119,8 +123,13 @@ newtype FilteringValueParser a = FilteringValueParser (Text -> Either Text a)
 parseFilteringValueAsIs :: FromHttpApiData a => FilteringValueParser a
 parseFilteringValueAsIs = FilteringValueParser parseUrlPiece
 
+class BuildableAutoFilter (filter :: * -> *) where
+    buildAutoFilter
+        :: Buildable a => Text -> filter a -> Builder
+
 -- | Application of a filter type to Servant API.
-class Typeable filter => IsAutoFilter (filter :: * -> *) where
+class (Typeable filter, BuildableAutoFilter filter) =>
+      IsAutoFilter (filter :: * -> *) where
     -- | For each supported filtering operation specifies parser for a filtering value.
     autoFilterParsers
         :: FromHttpApiData a
@@ -132,6 +141,12 @@ class Typeable filter => IsAutoFilter (filter :: * -> *) where
 -- | If no filtering command specified, think like if the given one was passed.
 defFilteringCmd :: Text
 defFilteringCmd = "eq"
+
+instance BuildableAutoFilter FilterMatching where
+    buildAutoFilter name = \case
+        FilterMatching v -> build name <> " = " <> build v
+        FilterNotMatching v -> build name <> " /= " <> build v
+        FilterItemsIn v -> build name <> " ∊ " <> listF v
 
 instance IsAutoFilter FilterMatching where
     autoFilterParsers _ = M.fromList
@@ -153,6 +168,13 @@ instance IsAutoFilter FilterMatching where
             mapM parseUrlPiece vals
 
     mapAutoFilterValue = fmap
+
+instance BuildableAutoFilter FilterComparing where
+    buildAutoFilter name = \case
+        FilterGT v -> build name <> " > " <> build v
+        FilterLT v -> build name <> " < " <> build v
+        FilterGTE v -> build name <> " >= " <> build v
+        FilterLTE v -> build name <> " <= " <> build v
 
 instance IsAutoFilter FilterComparing where
     autoFilterParsers _ = M.fromList
@@ -202,6 +224,9 @@ data SomeTypeAutoFilter a =
 instance Functor SomeTypeAutoFilter where
     fmap f (SomeTypeAutoFilter filtr) = SomeTypeAutoFilter (mapAutoFilterValue f filtr)
 
+instance Buildable a => Buildable (Text, SomeTypeAutoFilter a) where
+    build (name, SomeTypeAutoFilter f) = buildAutoFilter name f
+
 -- | Some filter for an item of type @a@.
 data TypeFilter (fk :: FilterKind *) where
     TypeAutoFilter
@@ -238,7 +263,7 @@ parseAutoTypeFilteringParam field key val =
                 then pure Nothing
                 else fmap Just $
                      maybeToRight ("Unclosed bracket in query key '" +| key |+ "'") $
-                     T.stripSuffix "]" remainder
+                     T.stripPrefix "[" <=< T.stripSuffix "]" $ remainder
 
         let op = mop ?: defFilteringCmd
         let parsersPerOp = autoFiltersParsers @filters @a
@@ -295,15 +320,19 @@ instance ( FromHttpApiData ty
     {-# INLINE parseFilteringParam #-}
 
 instance ( FromHttpApiData ty
+         , Buildable ty
          , Typeable ty
          , KnownSymbol name
          , AreFilteringParams params
          ) =>
          AreFilteringParams ('TyNamedParam name ('ManualFilter ty) ': params) where
     parseFilteringParam key val = asum
-        [ fmap (fmap (SomeFilter name)) $
-            guard (symbolValT @name == key) $> do
-                TypeManualFilter <$> parseUrlPiece @ty val
+        [ guard (name == key) $> do
+            v <- parseUrlPiece @ty val
+            return $ SomeFilter
+                { sfName = name
+                , sfFilter = TypeManualFilter v
+                }
 
         , fmap (fmap extendSomeFilter) $
             parseFilteringParam @params key val
@@ -358,11 +387,68 @@ instance ( HasServer subApi ctx
 
     hoistServerWithContext _ pm hst s = hoistServerWithContext (Proxy @subApi) pm hst . s
 
+class BuildSomeFilter params where
+    buildSomeFilter' :: SomeFilter params -> Maybe Builder
+
+instance BuildSomeFilter '[] where
+    buildSomeFilter' _ = Nothing
+
+instance ( KnownSymbol name
+         , Typeable a
+         , Buildable a
+         , BuildSomeFilter params
+         ) => BuildSomeFilter ('TyNamedParam name ('AutoFilter a) ': params) where
+    buildSomeFilter' SomeFilter{..} = asum
+        [ do
+          guard (name == sfName)
+          filtr <- gcast @_ @('AutoFilter a) sfFilter
+          return $ case filtr of TypeAutoFilter f -> build (name, f)
+
+        , buildSomeFilter' @params SomeFilter{..}
+        ]
+      where
+        name = symbolValT @name
+
+instance ( KnownSymbol name
+         , Typeable a
+         , Buildable a
+         , BuildSomeFilter params
+         ) => BuildSomeFilter ('TyNamedParam name ('ManualFilter a) ': params) where
+    buildSomeFilter' SomeFilter{..} = asum
+        [ do
+          guard (name == sfName)
+          filtr <- gcast @_ @('ManualFilter a) sfFilter
+          return $ case filtr of TypeManualFilter v -> name |+ ": " +| v |+ ""
+
+        , buildSomeFilter' @params SomeFilter{..}
+        ]
+      where
+        name = symbolValT @name
+
+buildSomeFilter :: BuildSomeFilter params => SomeFilter params -> Builder
+buildSomeFilter sf = buildSomeFilter' sf ?: error "Failed to build some filter"
+
+instance ( HasLoggingServer config subApi ctx
+         , ReifyParamsNames params
+         , AreFilteringParams params
+         , BuildSomeFilter params
+         ) =>
+         HasLoggingServer config (FilteringParams params :> subApi) ctx where
+    routeWithLog =
+        inRouteServer @(FilteringParams params :> LoggingApiRec config subApi) route $
+        \(paramsInfo, handler) filtering@(FilteringSpec params) ->
+            let paramLog
+                  | null params = "no filters"
+                  | otherwise = fmt . mconcat $
+                                L.intersperse ", " (map buildSomeFilter params)
+            in (addParamLogInfo paramLog paramsInfo, handler filtering)
+
 -- | We do not yet support passing filtering parameters in client.
 instance HasClient m subApi =>
          HasClient m (FilteringParams params :> subApi) where
     type Client m (FilteringParams params :> subApi) = Client m subApi
     clientWithRoute mp _ req = clientWithRoute mp (Proxy @subApi) req
+
 
 -- | For a given return type of an endpoint get corresponding filtering params.
 -- This mapping is sensible, since we usually allow to filter only on fields appearing in
