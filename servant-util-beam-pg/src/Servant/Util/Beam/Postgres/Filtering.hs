@@ -3,7 +3,7 @@
 module Servant.Util.Beam.Postgres.Filtering
     ( filterOn_
     , manualFilter_
-    , applyFilters
+    , applyFilters_
     ) where
 
 import Data.Typeable (cast, gcast, gcast1)
@@ -21,13 +21,8 @@ import Servant.Util.Combinators.Filtering
 import Servant.Util.Common
 
 
--- | Logic behind a filter which we can provide for user.
-data BeamFilter syntax s a where
-    AutoBeamFilter
-        :: (QExpr syntax s a -> QExpr syntax s Bool)
-        -> BeamFilter syntax s a
-    ManualBeamFilter
-        :: a -> BeamFilter syntax s a
+type BeamAutoFilter syntax s a =
+    QExpr syntax s a -> QExpr syntax s Bool
 
 -- | Backend implementation part - filter application.
 data FilteringApp syntax s (param :: TyNamedFilter) where
@@ -69,14 +64,14 @@ type FilteringSpecApp syntax s params =
 -- | Force a type family to be defined.
 -- Primarily for prettier error messages.
 type family AreFiltersDefined (a :: [* -> *]) :: Constraint where
-    AreFiltersDefined '[] = Show ()
+    AreFiltersDefined '[] = Show (Int -> Int)
     AreFiltersDefined a = ()
 
 -- | Implementation of given auto filter type for Beam Postgres backend.
 class Typeable filter =>
       AutoFilterSupport syntax s filter a where
     -- | Apply given filter to a value.
-    autoFilterSupport :: filter a -> QExpr syntax s a -> QExpr syntax s Bool
+    autoFilterSupport :: filter a -> BeamAutoFilter syntax s a
 
 instance ( HasSqlValueSyntax (Sql92ExpressionValueSyntax syntax) a
          , HasSqlEqualityCheck syntax a
@@ -99,67 +94,55 @@ instance ( HasSqlValueSyntax (Sql92ExpressionValueSyntax syntax) a
 
 -- | Lookup among filters supported for this type and prepare
 -- an appropriate one for (deferred) application.
-class TypeFiltersSupport' syntax s (filters :: [* -> *]) a where
-    typeFiltersSupport' :: SomeTypeFilter a -> Maybe (BeamFilter syntax s a)
+class TypeAutoFiltersSupport' syntax s (filters :: [* -> *]) a where
+    typeAutoFiltersSupport' :: SomeTypeAutoFilter a -> Maybe (BeamAutoFilter syntax s a)
 
-instance TypeFiltersSupport' syntax s '[] a where
-    typeFiltersSupport' _ = Nothing
+instance TypeAutoFiltersSupport' syntax s '[] a where
+    typeAutoFiltersSupport' _ = Nothing
 
-instance ( AutoFilterSupport syntax s filter a  -- TODO: which is weird constraint
-         , TypeFiltersSupport' syntax s filters a
+instance ( AutoFilterSupport syntax s filter a
+         , TypeAutoFiltersSupport' syntax s filters a
          , Typeable a
          ) =>
-         TypeFiltersSupport' syntax s (filter ': filters) a where
-    typeFiltersSupport' sf = asum
-        [ case sf of
-            SomeTypeAutoFilter filtr -> do
-              Identity filter' <- gcast1 @_ @_ @filter (Identity filtr)
-              return $ AutoBeamFilter (autoFilterSupport filter')
-            SomeTypeManualFilter val -> do
-              val' <- cast val
-              return $ ManualBeamFilter val'
+         TypeAutoFiltersSupport' syntax s (filter ': filters) a where
+    typeAutoFiltersSupport' sf@(SomeTypeAutoFilter filtr) = asum
+        [ do
+          Identity filter' <- gcast1 @_ @_ @filter (Identity filtr)
+          return $ autoFilterSupport filter'
 
-        , typeFiltersSupport' @syntax @s @filters sf
+        , typeAutoFiltersSupport' @syntax @s @filters sf
         ]
 
-type TypeFiltersSupport syntax s a =
+type TypeAutoFiltersSupport syntax s a =
     ( AreFiltersDefined (SupportedFilters a)
-    , TypeFiltersSupport' syntax s (SupportedFilters a) a
+    , TypeAutoFiltersSupport' syntax s (SupportedFilters a) a
     )
 
 -- | Safely choose an appropriate filter from supported ones
 -- and prepare it for application.
-typeFiltersSupport
+typeAutoFiltersSupport
     :: forall syntax s a.
-       TypeFiltersSupport syntax s a
-    => SomeTypeFilter a -> BeamFilter syntax s a
-typeFiltersSupport filtr =
-    typeFiltersSupport' @syntax @s @(SupportedFilters a) @a filtr
+       TypeAutoFiltersSupport syntax s a
+    => SomeTypeAutoFilter a -> BeamAutoFilter syntax s a
+typeAutoFiltersSupport filtr =
+    typeAutoFiltersSupport' @syntax @s @(SupportedFilters a) @a filtr
     ?: error "impossible, invariants of SomeTypeFilter are violated"
 
 -- | Merge a filter and previously found corresponding filtering application.
-class ApplyAppropriateFilter' syntax s (fk :: * -> FilterKind *) a where
+class ApplyAppropriateFilter' syntax s (fk :: FilterKind *) where
     applyAppropriateFilter'
-        :: Typeable a
-        => FilteringApp syntax s ('TyNamedParam name (fk a))
-        -> SomeTypeFilter a
+        :: FilteringApp syntax s ('TyNamedParam name fk)
+        -> TypeFilter fk
         -> QExpr syntax s Bool
 
-instance TypeFiltersSupport syntax s a =>
-         ApplyAppropriateFilter' syntax s 'AutoFilter a where
-    applyAppropriateFilter' (AutoFilteringApp field) filtr =
-        case typeFiltersSupport filtr of
-            AutoBeamFilter app -> app field
-            ManualBeamFilter{} -> error "Invalid filter kind"
+instance TypeAutoFiltersSupport syntax s a =>
+         ApplyAppropriateFilter' syntax s ('AutoFilter a) where
+    applyAppropriateFilter' (AutoFilteringApp field) (TypeAutoFilter filtr) =
+        typeAutoFiltersSupport filtr field
 
-instance TypeFiltersSupport syntax s a =>
-         ApplyAppropriateFilter' syntax s 'ManualFilter a where
-    applyAppropriateFilter' (ManualFilteringApp app) filtr =
-        case typeFiltersSupport @syntax @s filtr of
-            ManualBeamFilter v ->
-                fmap app (cast v)
-                ?: error "Something is wrong, failed to case value!"
-            AutoBeamFilter{}   -> error "Invalid filter kind"
+instance ApplyAppropriateFilter' syntax s ('ManualFilter a) where
+    applyAppropriateFilter' (ManualFilteringApp app) (TypeManualFilter val) =
+        fmap app (cast val) ?: error "Something is wrong, failed to cast value!"
 
 -- | Lookups for an appropriate filter application in a given 'FilteringSpecApp'
 -- and applies it to a given filter.
@@ -172,16 +155,16 @@ class ApplyFilter' syntax s (params :: [TyNamedFilter]) where
 instance ApplyFilter' syntax s '[] where
     applyFilter' _ _  = Nothing
 
-instance ( Typeable a
-         , ApplyAppropriateFilter' syntax s fk a
+instance ( Typeable fk
+         , ApplyAppropriateFilter' syntax s fk
          , KnownSymbol name
          , ApplyFilter' syntax s params
          ) =>
-         ApplyFilter' syntax s ('TyNamedParam name (fk a) ': params) where
+         ApplyFilter' syntax s ('TyNamedParam name fk ': params) where
     applyFilter' (app `HCons` fields) (SomeFilter name filtr) = asum
         [ do
           guard (symbolValT @name == name)
-          let filtr' = gcast @_ @a filtr
+          let filtr' = gcast @_ @fk filtr
                        ?: error "Something is wrong, failed to cast filter!"
           return $ applyAppropriateFilter' app filtr'
 
@@ -201,12 +184,12 @@ applyFilter app filtr =
 
 -- | Applies a whole filtering specification to a set of response fields.
 -- Resulting value can be put to 'guard_' or 'filter_' function.
-applyFilters
+applyFilters_
     :: (ApplyFilter' syntax s params, IsSql92ExpressionSyntax syntax)
     => FilteringSpec params
     -> FilteringSpecApp syntax s params
     -> QExpr syntax s Bool
-applyFilters (FilteringSpec filters) app =
+applyFilters_ (FilteringSpec filters) app =
     foldl' (\acc filtr -> acc &&. applyFilter app filtr) (val_ True) filters
 
 -- | Implement an automatic filter.

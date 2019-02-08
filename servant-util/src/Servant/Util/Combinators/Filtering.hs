@@ -8,10 +8,11 @@ module Servant.Util.Combinators.Filtering
     , FilteringParams
     , SupportedFilters
     , IsAutoFilter (..)
-    , SomeTypeFilter (..)
+    , SomeTypeAutoFilter (..)
+    , TypeFilter (..)
     , SomeFilter (..)
     , FilteringSpec (..)
-    , mapSomeTypeFilter
+    , noFilters
 
      -- * Filter types
     , FilterMatching (..)
@@ -37,6 +38,7 @@ import Servant (HasServer (..), (:>), FromHttpApiData(..), err400, ServantErr(..
 import Network.Wai.Internal (rawQueryString)
 import Servant.Server.Internal (addParameterCheck, withRequest, delayedFailFatal)
 import Fmt ((+|),(|+))
+import Data.Default (Default (..))
 import Data.Time.Clock (UTCTime)
 import Network.HTTP.Types.URI (QueryText, parseQueryText)
 import qualified Data.Map as M
@@ -194,20 +196,27 @@ instance (IsAutoFilter filter, AreAutoFilters filters) =>
 
 -- | Some filter for an item of type @a@.
 -- Filter type is guaranteed to be one of @SupportedFilters a@.
-data SomeTypeFilter a
-    = forall filter. IsAutoFilter filter => SomeTypeAutoFilter (filter a)
-      -- ^ One of automatic filters for type @a@.
-    | SomeTypeManualFilter a
-      -- ^ Manually implemented filter.
+data SomeTypeAutoFilter a =
+    forall filter. IsAutoFilter filter => SomeTypeAutoFilter (filter a)
 
-mapSomeTypeFilter :: (a -> b) -> SomeTypeFilter a -> SomeTypeFilter b
-mapSomeTypeFilter f (SomeTypeAutoFilter filtr) = SomeTypeAutoFilter (mapAutoFilterValue f filtr)
-mapSomeTypeFilter f (SomeTypeManualFilter v) = SomeTypeManualFilter (f v)
+instance Functor SomeTypeAutoFilter where
+    fmap f (SomeTypeAutoFilter filtr) = SomeTypeAutoFilter (mapAutoFilterValue f filtr)
+
+-- | Some filter for an item of type @a@.
+data TypeFilter (fk :: FilterKind *) where
+    TypeAutoFilter
+        :: SomeTypeAutoFilter a -> TypeFilter ('AutoFilter a)
+    -- ^ One of automatic filters for type @a@.
+    -- Filter type is guaranteed to be one of @SupportedFilters a@.
+
+    TypeManualFilter
+        :: a -> TypeFilter ('ManualFilter a)
+    -- ^ Manually implemented filter.
 
 autoFiltersParsers
     :: forall filters a.
        (AreAutoFilters filters, FromHttpApiData a)
-    => Map Text $ FilteringValueParser (SomeTypeFilter a)
+    => Map Text $ FilteringValueParser (SomeTypeAutoFilter a)
 autoFiltersParsers =
     let parsers = mapFilterTypes (fmap (fmap SomeTypeAutoFilter) . autoFilterParsers)
                                  (Proxy @filters)
@@ -221,7 +230,7 @@ autoFiltersParsers =
 parseAutoTypeFilteringParam
     :: forall a (filters :: [* -> *]).
        (filters ~ SupportedFilters a, AreAutoFilters filters, FromHttpApiData a)
-    => Text -> Text -> Text -> Maybe (Either Text $ SomeTypeFilter a)
+    => Text -> Text -> Text -> Maybe (Either Text $ SomeTypeAutoFilter a)
 parseAutoTypeFilteringParam field key val =
     let (field', remainder) = T.break (== '[') key
     in guard (field == field') $> do
@@ -247,9 +256,9 @@ parseAutoTypeFilteringParam field key val =
 -- | Some filter.
 -- This filter is guaranteed to match a type which is mentioned in @params@.
 data SomeFilter (params :: [TyNamedFilter]) where
-    SomeFilter :: Typeable a =>
+    SomeFilter :: Typeable fk =>
         { sfName :: Text
-        , sfFilter :: SomeTypeFilter a
+        , sfFilter :: TypeFilter fk
         } -> SomeFilter params
 
 extendSomeFilter :: SomeFilter params -> SomeFilter (param ': params)
@@ -275,7 +284,7 @@ instance ( FromHttpApiData ty
          ) =>
          AreFilteringParams ('TyNamedParam name ('AutoFilter ty) ': params) where
     parseFilteringParam key val = asum
-        [ fmap (fmap (SomeFilter name)) $
+        [ fmap (fmap (SomeFilter name . TypeAutoFilter)) $
             parseAutoTypeFilteringParam @ty (symbolValT @name) key val
 
         , fmap (fmap extendSomeFilter) $
@@ -294,7 +303,7 @@ instance ( FromHttpApiData ty
     parseFilteringParam key val = asum
         [ fmap (fmap (SomeFilter name)) $
             guard (symbolValT @name == key) $> do
-                SomeTypeManualFilter <$> parseUrlPiece @ty val
+                TypeManualFilter <$> parseUrlPiece @ty val
 
         , fmap (fmap extendSomeFilter) $
             parseFilteringParam @params key val
@@ -319,6 +328,12 @@ extractQueryParamsFilters qt = sequence $ do
 -- Invariant: each filter correspond to some type mentioned in @params@.
 data FilteringSpec (params :: [TyNamedFilter]) =
     FilteringSpec [SomeFilter params]
+
+instance Default (FilteringSpec params) where
+    def = noFilters
+
+noFilters :: FilteringSpec params
+noFilters = FilteringSpec []
 
 instance ( HasServer subApi ctx
          , AreFilteringParams params
