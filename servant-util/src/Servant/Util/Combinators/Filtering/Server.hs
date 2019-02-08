@@ -51,7 +51,7 @@ parseAutoTypeFilteringParam field key val =
 {-# INLINE parseAutoTypeFilteringParam #-}
 
 -- | Application of filter params.
-class AreFilteringParams (params :: [TyNamedFilter])  where
+class AreFilteringParams (params :: [TyNamedFilter]) where
     -- | Try to parser given query parameter as a filter corresponding to @params@
     -- configuration.
     -- If the query parameter is not recognized as filtering one, 'Nothing' is returned.

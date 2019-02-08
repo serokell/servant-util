@@ -17,7 +17,7 @@ import qualified Data.Map as M
 import qualified Data.Text as T
 import Data.Time.Clock (UTCTime)
 import Fmt (build, listF, (+|), (|+))
-import Servant (FromHttpApiData (..))
+import Servant (FromHttpApiData (..), ToHttpApiData (..))
 import System.Console.Pretty (Color (..), Style (..), color, style)
 
 import Servant.Util.Combinators.Filtering.Base
@@ -60,6 +60,11 @@ instance IsAutoFilter FilterMatching where
 
     mapAutoFilterValue = fmap
 
+    autoFilterEncode = \case
+        FilterMatching v -> (defFilteringCmd, toQueryParam v)
+        FilterNotMatching v -> ("neq", toQueryParam v)
+        FilterItemsIn vs -> ("in", "[" <> T.intercalate "," (map toQueryParam vs) <> "]")
+
 
 -- | Support for @(<)@, @(>)@, @(<=)@ and @(>=)@ operations.
 data FilterComparing a
@@ -93,6 +98,12 @@ instance IsAutoFilter FilterComparing where
         ]
 
     mapAutoFilterValue = fmap
+
+    autoFilterEncode = \case
+        FilterGT v -> ("gt", toQueryParam v)
+        FilterLT v -> ("lt", toQueryParam v)
+        FilterGTE v -> ("gte", toQueryParam v)
+        FilterLTE v -> ("lte", toQueryParam v)
 
 
 -- | SQL like pattern.

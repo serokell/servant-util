@@ -7,7 +7,7 @@ module Servant.Util.Combinators.Filtering.Logging
 import Universum
 
 import qualified Data.List as L
-import Data.Typeable (gcast)
+import Data.Typeable (cast)
 import Fmt (Buildable (..), Builder, fmt)
 import Fmt ((+|), (|+))
 import GHC.TypeLits (KnownSymbol)
@@ -33,7 +33,7 @@ instance ( KnownSymbol name
     buildSomeFilter' SomeFilter{..} = asum
         [ do
           guard (name == sfName)
-          filtr <- gcast @_ @('AutoFilter a) sfFilter
+          filtr :: TypeFilter 'AutoFilter a <- cast sfFilter
           return $ case filtr of TypeAutoFilter f -> build (name, f)
 
         , buildSomeFilter' @params SomeFilter{..}
@@ -49,7 +49,7 @@ instance ( KnownSymbol name
     buildSomeFilter' SomeFilter{..} = asum
         [ do
           guard (name == sfName)
-          filtr <- gcast @_ @('ManualFilter a) sfFilter
+          filtr :: TypeFilter 'ManualFilter a <- cast sfFilter
           return $ case filtr of TypeManualFilter v -> name |+ ": " +| v |+ ""
 
         , buildSomeFilter' @params SomeFilter{..}

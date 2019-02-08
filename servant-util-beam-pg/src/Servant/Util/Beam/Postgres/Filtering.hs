@@ -6,7 +6,7 @@ module Servant.Util.Beam.Postgres.Filtering
     , applyFilters_
     ) where
 
-import Data.Typeable (cast, gcast, gcast1)
+import Data.Typeable (cast, gcast1)
 import Universum
 
 import Data.Kind (type (*))
@@ -129,18 +129,18 @@ typeAutoFiltersSupport filtr =
     ?: error "impossible, invariants of SomeTypeFilter are violated"
 
 -- | Merge a filter and previously found corresponding filtering application.
-class ApplyAppropriateFilter' syntax s (fk :: FilterKind *) where
+class ApplyAppropriateFilter' syntax s fk a where
     applyAppropriateFilter'
-        :: FilteringApp syntax s ('TyNamedParam name fk)
-        -> TypeFilter fk
+        :: FilteringApp syntax s ('TyNamedParam name (fk a))
+        -> TypeFilter fk a
         -> QExpr syntax s Bool
 
 instance TypeAutoFiltersSupport syntax s a =>
-         ApplyAppropriateFilter' syntax s ('AutoFilter a) where
+         ApplyAppropriateFilter' syntax s 'AutoFilter a where
     applyAppropriateFilter' (AutoFilteringApp field) (TypeAutoFilter filtr) =
         typeAutoFiltersSupport filtr field
 
-instance ApplyAppropriateFilter' syntax s ('ManualFilter a) where
+instance ApplyAppropriateFilter' syntax s 'ManualFilter a where
     applyAppropriateFilter' (ManualFilteringApp app) (TypeManualFilter val) =
         fmap app (cast val) ?: error "Something is wrong, failed to cast value!"
 
@@ -155,17 +155,17 @@ class ApplyFilter' syntax s (params :: [TyNamedFilter]) where
 instance ApplyFilter' syntax s '[] where
     applyFilter' _ _  = Nothing
 
-instance ( Typeable fk
-         , ApplyAppropriateFilter' syntax s fk
+instance ( Typeable fk, Typeable a
+         , ApplyAppropriateFilter' syntax s fk a
          , KnownSymbol name
          , ApplyFilter' syntax s params
          ) =>
-         ApplyFilter' syntax s ('TyNamedParam name fk ': params) where
+         ApplyFilter' syntax s ('TyNamedParam name (fk a) ': params) where
     applyFilter' (app `HCons` fields) (SomeFilter name filtr) = asum
         [ do
           guard (symbolValT @name == name)
-          let filtr' = gcast @_ @fk filtr
-                       ?: error "Something is wrong, failed to cast filter!"
+          let filtr' :: TypeFilter fk a =
+                cast filtr ?: error "Something is wrong, failed to cast filter!"
           return $ applyAppropriateFilter' app filtr'
 
         , applyFilter' @syntax @s @params fields (SomeFilter name filtr)

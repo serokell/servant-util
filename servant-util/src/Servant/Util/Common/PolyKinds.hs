@@ -6,8 +6,10 @@ module Servant.Util.Common.PolyKinds
     ( TyNamedParam (..)
     , type (?:)
     , TyNamedParamType
+    , TyNamedParamsNames
     , ReifyParamsNames (..)
     , reifyParamsNames
+    , Elem
     ) where
 
 import qualified Data.Set as S
@@ -23,6 +25,10 @@ type (?:) = 'TyNamedParam
 
 type family TyNamedParamType p where
     TyNamedParamType ('TyNamedParam _ a) = a
+
+type family TyNamedParamsNames (params :: [TyNamedParam k]) :: [Symbol] where
+    TyNamedParamsNames '[] = '[]
+    TyNamedParamsNames ('TyNamedParam name _ ': params) = name ': TyNamedParamsNames params
 
 -- | Extract info from 'SortingParams'.
 class ReifyParamsNames (params :: [TyNamedParam k]) where
@@ -46,3 +52,8 @@ type family ParamsContainNoName (params :: [TyNamedParam k]) name :: Constraint 
         TypeError ('Text "Duplicate name in sorting parameters " ':$$: 'ShowType name)
     ParamsContainNoName ('TyNamedParam name p ': params) name' =
         ParamsContainNoName params name'
+
+type family Elem (a :: k) (l :: [k]) :: Bool where
+    Elem a '[]      = 'False
+    Elem a (a ': l) = 'True
+    Elem a (_ ': l) = Elem a l

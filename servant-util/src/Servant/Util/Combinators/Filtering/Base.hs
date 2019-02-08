@@ -32,7 +32,8 @@ import Universum
 import qualified Data.Map as M
 import Fmt (Buildable (..),  Builder,)
 import Data.Kind (type (*))
-import Servant (FromHttpApiData(..), )
+import Servant (FromHttpApiData(..), ToHttpApiData (..))
+import GHC.Exts (IsList)
 import Data.Default (Default (..))
 
 import Servant.Util.Common
@@ -92,6 +93,11 @@ class (Typeable filter, BuildableAutoFilter filter) =>
         :: FromHttpApiData a
         => Proxy filter -> Map Text $ FilteringValueParser (filter a)
 
+    -- | Encode a filter to query parameter value.
+    autoFilterEncode
+        :: ToHttpApiData a
+        => filter a -> (Text, Text)
+
     mapAutoFilterValue
         :: (a -> b) -> filter a -> filter b
 
@@ -133,22 +139,22 @@ instance Buildable a => Buildable (Text, SomeTypeAutoFilter a) where
     build (name, SomeTypeAutoFilter f) = buildAutoFilter name f
 
 -- | Some filter for an item of type @a@.
-data TypeFilter (fk :: FilterKind *) where
+data TypeFilter (fk :: * -> FilterKind *) a where
     TypeAutoFilter
-        :: SomeTypeAutoFilter a -> TypeFilter ('AutoFilter a)
+        :: SomeTypeAutoFilter a -> TypeFilter 'AutoFilter a
     -- ^ One of automatic filters for type @a@.
     -- Filter type is guaranteed to be one of @SupportedFilters a@.
 
     TypeManualFilter
-        :: a -> TypeFilter ('ManualFilter a)
+        :: a -> TypeFilter 'ManualFilter a
     -- ^ Manually implemented filter.
 
 -- | Some filter.
 -- This filter is guaranteed to match a type which is mentioned in @params@.
 data SomeFilter (params :: [TyNamedFilter]) where
-    SomeFilter :: Typeable fk =>
+    SomeFilter :: (Typeable fk, Typeable a) =>
         { sfName :: Text
-        , sfFilter :: TypeFilter fk
+        , sfFilter :: TypeFilter fk a
         } -> SomeFilter params
 
 extendSomeFilter :: SomeFilter params -> SomeFilter (param ': params)
@@ -157,8 +163,8 @@ extendSomeFilter (SomeFilter f n) = SomeFilter f n
 -- | This is what you get in endpoint implementation, it contains all filters
 -- supplied by a user.
 -- Invariant: each filter correspond to some type mentioned in @params@.
-data FilteringSpec (params :: [TyNamedFilter]) =
-    FilteringSpec [SomeFilter params]
+newtype FilteringSpec (params :: [TyNamedFilter]) = FilteringSpec [SomeFilter params]
+    deriving (IsList)
 
 instance Default (FilteringSpec params) where
     def = noFilters
