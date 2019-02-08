@@ -66,6 +66,12 @@ type FilteringSpecApp syntax s params =
     HList (FilteringApp syntax s) params
 
 
+-- | Force a type family to be defined.
+-- Primarily for prettier error messages.
+type family AreFiltersDefined (a :: [* -> *]) :: Constraint where
+    AreFiltersDefined '[] = Show ()
+    AreFiltersDefined a = ()
+
 -- | Implementation of given auto filter type for Beam Postgres backend.
 class Typeable filter =>
       AutoFilterSupport syntax s filter a where
@@ -117,7 +123,9 @@ instance ( AutoFilterSupport syntax s filter a  -- TODO: which is weird constrai
         ]
 
 type TypeFiltersSupport syntax s a =
-    TypeFiltersSupport' syntax s (SupportedFilters a) a
+    ( AreFiltersDefined (SupportedFilters a)
+    , TypeFiltersSupport' syntax s (SupportedFilters a) a
+    )
 
 -- | Safely choose an appropriate filter from supported ones
 -- and prepare it for application.
