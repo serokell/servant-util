@@ -1,43 +1,9 @@
 {-# LANGUAGE TypeInType #-}
 
-module Servant.Util.Beam.Postgres.Filtering
-    ( filterOn_
-    , manualFilter_
-    , applyFilters_
-    ) where
+{- | Implements filtering with beam-postgres.
 
-import Data.Typeable (cast, gcast1)
-import Universum
-
-import Data.Kind (type (*))
-import Database.Beam.Backend.SQL (HasSqlValueSyntax, IsSql92ExpressionSyntax,
-                                  Sql92ExpressionValueSyntax)
-import Database.Beam.Query (HasSqlEqualityCheck, in_, val_, (&&.), (/=.), (<.), (<=.), (==.), (>.),
-                            (>=.))
-import Database.Beam.Query.Internal (QExpr)
-import GHC.TypeLits (KnownSymbol)
-
-import Servant.Util.Combinators.Filtering
-import Servant.Util.Common
-
-
-type BeamAutoFilter syntax s a =
-    QExpr syntax s a -> QExpr syntax s Bool
-
--- | Backend implementation part - filter application.
-data FilteringApp syntax s (param :: TyNamedFilter) where
-    AutoFilteringApp
-        :: Typeable a
-        => QExpr syntax s a
-        -> FilteringApp syntax s ('TyNamedParam name ('AutoFilter a))
-    ManualFilteringApp
-        :: Typeable a
-        => (a -> QExpr syntax s Bool)
-        -> FilteringApp syntax s ('TyNamedParam name ('ManualFilter a))
-
-{- | List of response fields we want to allow filtering on.
-
-Example:
+When setting filtering for an endpoint, you usually need to construct a filtering spec
+application first, which describes how to performing filtering over your rows:
 
 @
 filteringSpecApp
@@ -54,30 +20,57 @@ filteringSpecApp =
     HNil
 @
 
-Annotating 'fieldFilter' call with parameter name is fully optional and used only
-to visually disambiguate filters of the same types.
+Annotating 'filterOn_' and 'customFilter_' calls with parameter name is fully optional
+and used only to visually disambiguate filters of the same types.
+
+Next, you use `applyFilters_` to build a filtering expression understandable by Beam.
 -}
-type FilteringSpecApp syntax s params =
-    HList (FilteringApp syntax s) params
+module Servant.Util.Beam.Postgres.Filtering
+    ( filterOn_
+    , manualFilter_
+    , applyFilters_
+    ) where
 
+import Universum
 
--- | Force a type family to be defined.
--- Primarily for prettier error messages.
-type family AreFiltersDefined (a :: [* -> *]) :: Constraint where
-    AreFiltersDefined '[] = Show (Int -> Int)
-    AreFiltersDefined a = ()
+import Data.Kind (type (*))
+import Database.Beam.Backend.SQL (HasSqlValueSyntax, IsSql92ExpressionSyntax,
+                                  Sql92ExpressionValueSyntax)
+import Database.Beam.Query (HasSqlEqualityCheck, in_, val_, (&&.), (/=.), (<.), (<=.), (==.), (>.),
+                            (>=.))
+import Database.Beam.Query.Internal (QExpr)
 
--- | Implementation of given auto filter type for Beam Postgres backend.
-class Typeable filter =>
-      AutoFilterSupport syntax s filter a where
-    -- | Apply given filter to a value.
-    autoFilterSupport :: filter a -> BeamAutoFilter syntax s a
+import Servant.Util.Combinators.Filtering
+import Servant.Util.Common
+
+-- | Implements filters via Beam query expressions ('QExpr').
+data BeamFilterBackend (syntax :: *) (s :: *)
+
+instance IsSql92ExpressionSyntax syntax =>
+         FilterBackend (BeamFilterBackend syntax s) where
+
+    type AutoFilteredValue (BeamFilterBackend syntax s) a =
+        QExpr syntax s a
+
+    newtype MatchPredicate (BeamFilterBackend syntax s) =
+        BeamMatchPredicate
+        { unBeamMatchPredicate :: QExpr syntax s Bool
+        }
+
+instance IsSql92ExpressionSyntax syntax =>
+         Semigroup (MatchPredicate (BeamFilterBackend syntax s)) where
+    BeamMatchPredicate a <> BeamMatchPredicate b = BeamMatchPredicate (a &&. b)
+
+instance IsSql92ExpressionSyntax syntax =>
+         Monoid (MatchPredicate (BeamFilterBackend syntax s)) where
+    mempty = BeamMatchPredicate $ val_ True
+    mappend = (<>)
 
 instance ( HasSqlValueSyntax (Sql92ExpressionValueSyntax syntax) a
          , HasSqlEqualityCheck syntax a
          ) =>
-         AutoFilterSupport syntax s FilterMatching a where
-    autoFilterSupport = \case
+         AutoFilterSupport (BeamFilterBackend syntax s) FilterMatching a where
+    autoFilterSupport = BeamMatchPredicate ... \case
         FilterMatching v -> (==. val_ v)
         FilterNotMatching v -> (/=. val_ v)
         FilterItemsIn vs -> (`in_` map val_ vs)
@@ -85,120 +78,29 @@ instance ( HasSqlValueSyntax (Sql92ExpressionValueSyntax syntax) a
 instance ( HasSqlValueSyntax (Sql92ExpressionValueSyntax syntax) a
          , IsSql92ExpressionSyntax syntax
          ) =>
-         AutoFilterSupport syntax s FilterComparing a where
-    autoFilterSupport = \case
+         AutoFilterSupport (BeamFilterBackend syntax s) FilterComparing a where
+    autoFilterSupport = BeamMatchPredicate ... \case
         FilterGT v -> (>. val_ v)
         FilterLT v -> (<. val_ v)
         FilterGTE v -> (>=. val_ v)
         FilterLTE v -> (<=. val_ v)
 
--- | Lookup among filters supported for this type and prepare
--- an appropriate one for (deferred) application.
-class TypeAutoFiltersSupport' syntax s (filters :: [* -> *]) a where
-    typeAutoFiltersSupport' :: SomeTypeAutoFilter a -> Maybe (BeamAutoFilter syntax s a)
-
-instance TypeAutoFiltersSupport' syntax s '[] a where
-    typeAutoFiltersSupport' _ = Nothing
-
-instance ( AutoFilterSupport syntax s filter a
-         , TypeAutoFiltersSupport' syntax s filters a
-         , Typeable a
-         ) =>
-         TypeAutoFiltersSupport' syntax s (filter ': filters) a where
-    typeAutoFiltersSupport' sf@(SomeTypeAutoFilter filtr) = asum
-        [ do
-          Identity filter' <- gcast1 @_ @_ @filter (Identity filtr)
-          return $ autoFilterSupport filter'
-
-        , typeAutoFiltersSupport' @syntax @s @filters sf
-        ]
-
-type TypeAutoFiltersSupport syntax s a =
-    ( AreFiltersDefined (SupportedFilters a)
-    , TypeAutoFiltersSupport' syntax s (SupportedFilters a) a
-    )
-
--- | Safely choose an appropriate filter from supported ones
--- and prepare it for application.
-typeAutoFiltersSupport
-    :: forall syntax s a.
-       TypeAutoFiltersSupport syntax s a
-    => SomeTypeAutoFilter a -> BeamAutoFilter syntax s a
-typeAutoFiltersSupport filtr =
-    typeAutoFiltersSupport' @syntax @s @(SupportedFilters a) @a filtr
-    ?: error "impossible, invariants of SomeTypeFilter are violated"
-
--- | Merge a filter and previously found corresponding filtering application.
-class ApplyAppropriateFilter' syntax s fk a where
-    applyAppropriateFilter'
-        :: FilteringApp syntax s ('TyNamedParam name (fk a))
-        -> TypeFilter fk a
-        -> QExpr syntax s Bool
-
-instance TypeAutoFiltersSupport syntax s a =>
-         ApplyAppropriateFilter' syntax s 'AutoFilter a where
-    applyAppropriateFilter' (AutoFilteringApp field) (TypeAutoFilter filtr) =
-        typeAutoFiltersSupport filtr field
-
-instance ApplyAppropriateFilter' syntax s 'ManualFilter a where
-    applyAppropriateFilter' (ManualFilteringApp app) (TypeManualFilter val) =
-        fmap app (cast val) ?: error "Something is wrong, failed to cast value!"
-
--- | Lookups for an appropriate filter application in a given 'FilteringSpecApp'
--- and applies it to a given filter.
-class ApplyFilter' syntax s (params :: [TyNamedFilter]) where
-    applyFilter'
-        :: FilteringSpecApp syntax s params
-        -> SomeFilter params
-        -> Maybe (QExpr syntax s Bool)
-
-instance ApplyFilter' syntax s '[] where
-    applyFilter' _ _  = Nothing
-
-instance ( Typeable fk, Typeable a
-         , ApplyAppropriateFilter' syntax s fk a
-         , KnownSymbol name
-         , ApplyFilter' syntax s params
-         ) =>
-         ApplyFilter' syntax s ('TyNamedParam name (fk a) ': params) where
-    applyFilter' (app `HCons` fields) (SomeFilter name filtr) = asum
-        [ do
-          guard (symbolValT @name == name)
-          let filtr' :: TypeFilter fk a =
-                cast filtr ?: error "Something is wrong, failed to cast filter!"
-          return $ applyAppropriateFilter' app filtr'
-
-        , applyFilter' @syntax @s @params fields (SomeFilter name filtr)
-        ]
-
--- | Applies a filter to a set of response fields which matter for filtering.
-applyFilter
-    :: ApplyFilter' syntax s params
-    => FilteringSpecApp syntax s params
-    -> SomeFilter params
-    -> QExpr syntax s Bool
-applyFilter app filtr =
-    applyFilter' app filtr ?: error "SomeFilter invariants violated"
-    -- TODO: actually we're not protected from this error as soon as SomeFilter can be
-    -- unwrapped and wrapped back
-
 -- | Applies a whole filtering specification to a set of response fields.
 -- Resulting value can be put to 'guard_' or 'filter_' function.
 applyFilters_
-    :: (ApplyFilter' syntax s params, IsSql92ExpressionSyntax syntax)
+    :: (BackendApplySomeFilter backend params, backend ~ BeamFilterBackend syntax s)
     => FilteringSpec params
-    -> FilteringSpecApp syntax s params
+    -> FilteringSpecApp backend params
     -> QExpr syntax s Bool
-applyFilters_ (FilteringSpec filters) app =
-    foldl' (\acc filtr -> acc &&. applyFilter app filtr) (val_ True) filters
+applyFilters_ = unBeamMatchPredicate ... backendApplyFilters
 
 -- | Implement an automatic filter.
 -- User-provided filtering operation will do filter on this value.
 filterOn_
     :: forall name a syntax s.
-       Typeable a
+       (Typeable a)
     => QExpr syntax s a
-    -> FilteringApp syntax s ('TyNamedParam name ('AutoFilter a))
+    -> FilteringApp (BeamFilterBackend syntax s) ('TyNamedParam name ('AutoFilter a))
 filterOn_ = AutoFilteringApp
 
 -- | Implement a manual filter.
@@ -206,7 +108,7 @@ filterOn_ = AutoFilteringApp
 -- to construct a Beam predicate involving that value and relevant response fields.
 manualFilter_
     :: forall name a syntax s.
-       Typeable a
+       (Typeable a)
     => (a -> QExpr syntax s Bool)
-    -> FilteringApp syntax s ('TyNamedParam name ('ManualFilter a))
-manualFilter_ = ManualFilteringApp
+    -> FilteringApp (BeamFilterBackend syntax s) ('TyNamedParam name ('ManualFilter a))
+manualFilter_ filtr = ManualFilteringApp (BeamMatchPredicate . filtr)

@@ -11,6 +11,15 @@ module Servant.Util.Combinators.Filtering
     , FilteringSpec (..)
     , noFilters
 
+     -- * Backends
+    , FilterBackend (..)
+    , AutoFilterSupport (..)
+    , FilteringApp (..)
+    , FilteringSpecApp
+    , BackendApplySomeFilter
+    , typeAutoFiltersSupport
+    , backendApplyFilters
+
      -- * Filter types
     , FilterMatching (..)
     , FilterComparing (..)
@@ -26,6 +35,7 @@ module Servant.Util.Combinators.Filtering
     , FilteringSpecOf
     ) where
 
+import Servant.Util.Combinators.Filtering.Backend
 import Servant.Util.Combinators.Filtering.Base
 import Servant.Util.Combinators.Filtering.Client ()
 import Servant.Util.Combinators.Filtering.Filters
