@@ -13,8 +13,8 @@ module Servant.Util.Combinators.Filtering.Backend
     , backendApplyFilters
 
       -- * Server backend implementor API
-    , filterOn_
-    , manualFilter_
+    , filterOn
+    , manualFilter
     ) where
 
 import Universum
@@ -65,18 +65,6 @@ data FilteringApp backend param where
         :: Typeable a
         => (a -> MatchPredicate backend)
         -> FilteringApp backend ('TyNamedParam name ('ManualFilter a))
-
--- | Apply filter, evaluate whether a value matches or not.
-backendApplyFilter
-    :: forall backend name fk a.
-       TypeAutoFiltersSupport backend a
-    => FilteringApp backend ('TyNamedParam name (fk a))
-    -> TypeFilter fk a
-    -> MatchPredicate backend
-backendApplyFilter (AutoFilteringApp field) (TypeAutoFilter filtr) =
-    typeAutoFiltersSupport @backend filtr field
-backendApplyFilter (ManualFilteringApp app) (TypeManualFilter val) =
-    app val
 
 -- | Implementation of given auto filter type for Beam Postgres backend.
 class (Typeable filter, FilterBackend backend) =>
@@ -134,6 +122,22 @@ typeAutoFiltersSupport filtr =
     typeAutoFiltersSupport' @backend @(SupportedFilters a) @a filtr
     ?: error "impossible, invariants of SomeTypeFilter are violated"
 
+-- | Apply a filter for a specific type, evaluate whether a value matches or not.
+class BackendApplyTypeFilter backend (fk :: * -> FilterKind *) a where
+    backendApplyTypeFilter
+        :: FilteringApp backend ('TyNamedParam name (fk a))
+        -> TypeFilter fk a
+        -> MatchPredicate backend
+
+instance TypeAutoFiltersSupport backend a =>
+         BackendApplyTypeFilter backend 'AutoFilter a where
+    backendApplyTypeFilter (AutoFilteringApp field) (TypeAutoFilter filtr) =
+        typeAutoFiltersSupport @backend filtr field
+
+instance BackendApplyTypeFilter backend 'ManualFilter a where
+    backendApplyTypeFilter (ManualFilteringApp app) (TypeManualFilter val) =
+        app val
+
 -- | Lookups for an appropriate filter application in a given 'FilteringSpecApp'
 -- and applies it to a given filter.
 class FilterBackend backend =>
@@ -149,8 +153,8 @@ instance FilterBackend backend =>
 
 instance ( Typeable fk, Typeable a
          , FilterBackend backend
-         , TypeAutoFiltersSupport backend a
          , KnownSymbol name
+         , BackendApplyTypeFilter backend fk a
          , BackendApplySomeFilter backend params
          ) =>
          BackendApplySomeFilter backend ('TyNamedParam name (fk a) ': params) where
@@ -159,7 +163,7 @@ instance ( Typeable fk, Typeable a
           guard (symbolValT @name == name)
           let filtr' :: TypeFilter fk a =
                 cast filtr ?: error "Something is wrong, failed to cast filter!"
-          return $ backendApplyFilter app filtr'
+          return $ backendApplyTypeFilter app filtr'
 
         , backendApplySomeFilter' @backend @params fields (SomeFilter name filtr)
         ]
@@ -191,19 +195,19 @@ backendApplyFilters (FilteringSpec filters) app =
 
 -- | Implement an automatic filter.
 -- User-provided filtering operation will do filter on this value.
-filterOn_
+filterOn
     :: forall name backend a.
        (Typeable a)
     => AutoFilteredValue backend a
     -> FilteringApp backend ('TyNamedParam name ('AutoFilter a))
-filterOn_ = AutoFilteringApp
+filterOn = AutoFilteringApp
 
 -- | Implement a manual filter.
 -- You are provided with a value which user supplied and so you have
 -- to construct a Beam predicate involving that value and relevant response fields.
-manualFilter_
+manualFilter
     :: forall name backend a.
        (Typeable a)
     => (a -> MatchPredicate backend)
     -> FilteringApp backend ('TyNamedParam name ('ManualFilter a))
-manualFilter_ = ManualFilteringApp
+manualFilter = ManualFilteringApp

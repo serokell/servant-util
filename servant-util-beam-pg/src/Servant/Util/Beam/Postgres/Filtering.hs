@@ -1,13 +1,12 @@
-{-# LANGUAGE TypeInType #-}
-
 {- | Implements filtering with beam-postgres.
 
 When setting filtering for an endpoint, you usually need to construct a filtering spec
-application first, which describes how to performing filtering over your rows:
+application first, which describes how to perform filtering over your rows:
 
 @
 filteringSpecApp
     :: FilteringSpecApp
+        (BeamFilterBackend syntax s)
         [ "course" ?: 'AutoFilter Course
         , "desc" ?: 'AutoFilter Text
         , "isAwesome" ?: 'ManualFilter Bool
@@ -20,18 +19,21 @@ filteringSpecApp =
     HNil
 @
 
-Annotating 'filterOn_' and 'customFilter_' calls with parameter name is fully optional
+Annotating 'filterOn' and 'customFilter' calls with parameter name is fully optional
 and used only to visually disambiguate filters of the same types.
 
-Next, you use `applyFilters_` to build a filtering expression understandable by Beam.
+Next, you use `matches_` to build a filtering expression understandable by Beam.
 -}
 module Servant.Util.Beam.Postgres.Filtering
-    ( applyFilters_
+    ( matches_
+
+      -- * Re-exports
+    , filterOn
+    , manualFilter
     ) where
 
 import Universum
 
-import Data.Kind (type (*))
 import Database.Beam.Backend.SQL (HasSqlValueSyntax, IsSql92ExpressionSyntax,
                                   Sql92ExpressionValueSyntax)
 import Database.Beam.Query (HasSqlEqualityCheck, in_, val_, (&&.), (/=.), (<.), (<=.), (==.), (>.),
@@ -77,11 +79,11 @@ instance ( HasSqlValueSyntax (Sql92ExpressionValueSyntax syntax) a
 
 -- | Applies a whole filtering specification to a set of response fields.
 -- Resulting value can be put to 'guard_' or 'filter_' function.
-applyFilters_
+matches_
     :: ( backend ~ BeamFilterBackend syntax s
        , BackendApplySomeFilter backend params
        )
     => FilteringSpec params
     -> FilteringSpecApp backend params
     -> QExpr syntax s Bool
-applyFilters_ = backendApplyFilters
+matches_ = backendApplyFilters

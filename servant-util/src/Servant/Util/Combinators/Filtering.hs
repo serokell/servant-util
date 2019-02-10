@@ -20,6 +20,9 @@ module Servant.Util.Combinators.Filtering
     , typeAutoFiltersSupport
     , backendApplyFilters
 
+    , filterOn
+    , manualFilter
+
      -- * Filter types
     , FilterMatching (..)
     , FilterComparing (..)
