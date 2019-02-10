@@ -26,9 +26,7 @@ and used only to visually disambiguate filters of the same types.
 Next, you use `applyFilters_` to build a filtering expression understandable by Beam.
 -}
 module Servant.Util.Beam.Postgres.Filtering
-    ( filterOn_
-    , manualFilter_
-    , applyFilters_
+    ( applyFilters_
     ) where
 
 import Universum
@@ -41,7 +39,6 @@ import Database.Beam.Query (HasSqlEqualityCheck, in_, val_, (&&.), (/=.), (<.), 
 import Database.Beam.Query.Internal (QExpr)
 
 import Servant.Util.Combinators.Filtering
-import Servant.Util.Common
 
 -- | Implements filters via Beam query expressions ('QExpr').
 data BeamFilterBackend (syntax :: *) (s :: *)
@@ -52,25 +49,18 @@ instance IsSql92ExpressionSyntax syntax =>
     type AutoFilteredValue (BeamFilterBackend syntax s) a =
         QExpr syntax s a
 
-    newtype MatchPredicate (BeamFilterBackend syntax s) =
-        BeamMatchPredicate
-        { unBeamMatchPredicate :: QExpr syntax s Bool
-        }
+    type MatchPredicate (BeamFilterBackend syntax s) =
+        QExpr syntax s Bool
 
-instance IsSql92ExpressionSyntax syntax =>
-         Semigroup (MatchPredicate (BeamFilterBackend syntax s)) where
-    BeamMatchPredicate a <> BeamMatchPredicate b = BeamMatchPredicate (a &&. b)
+    trueMatchPreducate = val_ True
 
-instance IsSql92ExpressionSyntax syntax =>
-         Monoid (MatchPredicate (BeamFilterBackend syntax s)) where
-    mempty = BeamMatchPredicate $ val_ True
-    mappend = (<>)
+    conjunctMatchPredicates = (&&.)
 
 instance ( HasSqlValueSyntax (Sql92ExpressionValueSyntax syntax) a
          , HasSqlEqualityCheck syntax a
          ) =>
          AutoFilterSupport (BeamFilterBackend syntax s) FilterMatching a where
-    autoFilterSupport = BeamMatchPredicate ... \case
+    autoFilterSupport = \case
         FilterMatching v -> (==. val_ v)
         FilterNotMatching v -> (/=. val_ v)
         FilterItemsIn vs -> (`in_` map val_ vs)
@@ -79,7 +69,7 @@ instance ( HasSqlValueSyntax (Sql92ExpressionValueSyntax syntax) a
          , IsSql92ExpressionSyntax syntax
          ) =>
          AutoFilterSupport (BeamFilterBackend syntax s) FilterComparing a where
-    autoFilterSupport = BeamMatchPredicate ... \case
+    autoFilterSupport = \case
         FilterGT v -> (>. val_ v)
         FilterLT v -> (<. val_ v)
         FilterGTE v -> (>=. val_ v)
@@ -88,27 +78,10 @@ instance ( HasSqlValueSyntax (Sql92ExpressionValueSyntax syntax) a
 -- | Applies a whole filtering specification to a set of response fields.
 -- Resulting value can be put to 'guard_' or 'filter_' function.
 applyFilters_
-    :: (BackendApplySomeFilter backend params, backend ~ BeamFilterBackend syntax s)
+    :: ( backend ~ BeamFilterBackend syntax s
+       , BackendApplySomeFilter backend params
+       )
     => FilteringSpec params
     -> FilteringSpecApp backend params
     -> QExpr syntax s Bool
-applyFilters_ = unBeamMatchPredicate ... backendApplyFilters
-
--- | Implement an automatic filter.
--- User-provided filtering operation will do filter on this value.
-filterOn_
-    :: forall name a syntax s.
-       (Typeable a)
-    => QExpr syntax s a
-    -> FilteringApp (BeamFilterBackend syntax s) ('TyNamedParam name ('AutoFilter a))
-filterOn_ = AutoFilteringApp
-
--- | Implement a manual filter.
--- You are provided with a value which user supplied and so you have
--- to construct a Beam predicate involving that value and relevant response fields.
-manualFilter_
-    :: forall name a syntax s.
-       (Typeable a)
-    => (a -> QExpr syntax s Bool)
-    -> FilteringApp (BeamFilterBackend syntax s) ('TyNamedParam name ('ManualFilter a))
-manualFilter_ filtr = ManualFilteringApp (BeamMatchPredicate . filtr)
+applyFilters_ = backendApplyFilters

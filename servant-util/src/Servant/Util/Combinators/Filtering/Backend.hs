@@ -2,7 +2,8 @@
 
 -- | Provides base for filtering backend implementations.
 module Servant.Util.Combinators.Filtering.Backend
-    ( FilterBackend (..)
+    ( -- * Filtering backend
+      FilterBackend (..)
     , AutoFilterImpl
     , FilteringApp (..)
     , AutoFilterSupport (..)
@@ -10,6 +11,10 @@ module Servant.Util.Combinators.Filtering.Backend
     , BackendApplySomeFilter
     , typeAutoFiltersSupport
     , backendApplyFilters
+
+      -- * Server backend implementor API
+    , filterOn_
+    , manualFilter_
     ) where
 
 import Universum
@@ -22,8 +27,7 @@ import Servant.Util.Combinators.Filtering.Base
 import Servant.Util.Common
 
 -- | Implementation of filtering backend.
-class Monoid (MatchPredicate backend) =>
-      FilterBackend backend where
+class FilterBackend backend where
 
     -- | The part of object which we are filtering on,
     -- is provided by server backend implementor.
@@ -31,7 +35,21 @@ class Monoid (MatchPredicate backend) =>
 
     -- | A resulting predicate.
     -- Should have a 'Monoid' instance which forms a predicates conjunction.
-    data MatchPredicate backend
+    type MatchPredicate backend
+
+    -- | A match result when no filters applied.
+    trueMatchPreducate
+        :: MatchPredicate backend
+
+    -- | Conjunction of match results.
+    conjunctMatchPredicates
+        :: MatchPredicate backend
+        -> MatchPredicate backend
+        -> MatchPredicate backend
+
+    -- | Fold multiple match results.
+    concatMatchPredicates :: [MatchPredicate backend] -> MatchPredicate backend
+    concatMatchPredicates = foldl (conjunctMatchPredicates @backend) (trueMatchPreducate @backend)
 
 -- | Implementation of auto filter we provide.
 type AutoFilterImpl backend a =
@@ -50,12 +68,13 @@ data FilteringApp backend param where
 
 -- | Apply filter, evaluate whether a value matches or not.
 backendApplyFilter
-    :: TypeAutoFiltersSupport backend a
+    :: forall backend name fk a.
+       TypeAutoFiltersSupport backend a
     => FilteringApp backend ('TyNamedParam name (fk a))
     -> TypeFilter fk a
     -> MatchPredicate backend
 backendApplyFilter (AutoFilteringApp field) (TypeAutoFilter filtr) =
-    typeAutoFiltersSupport filtr field
+    typeAutoFiltersSupport @backend filtr field
 backendApplyFilter (ManualFilteringApp app) (TypeManualFilter val) =
     app val
 
@@ -95,7 +114,7 @@ instance ( AutoFilterSupport backend filter a
     typeAutoFiltersSupport' sf@(SomeTypeAutoFilter filtr) = asum
         [ do
           Identity filter' <- gcast1 @_ @_ @filter (Identity filtr)
-          return $ autoFilterSupport filter'
+          return $ autoFilterSupport @backend filter'
 
         , typeAutoFiltersSupport' @backend @filters sf
         ]
@@ -158,9 +177,33 @@ backendApplySomeFilter app filtr =
 
 -- | Applies multiple filters to a set of response fields which matter for filtering.
 backendApplyFilters
-    :: BackendApplySomeFilter backend params
+    :: forall backend params.
+       BackendApplySomeFilter backend params
     => FilteringSpec params
     -> FilteringSpecApp backend params
     -> MatchPredicate backend
 backendApplyFilters (FilteringSpec filters) app =
-    mconcat $ map (backendApplySomeFilter app) filters
+    concatMatchPredicates @backend $ map (backendApplySomeFilter app) filters
+
+-------------------------------------------------------------------------
+-- Building filters
+-------------------------------------------------------------------------
+
+-- | Implement an automatic filter.
+-- User-provided filtering operation will do filter on this value.
+filterOn_
+    :: forall name backend a.
+       (Typeable a)
+    => AutoFilteredValue backend a
+    -> FilteringApp backend ('TyNamedParam name ('AutoFilter a))
+filterOn_ = AutoFilteringApp
+
+-- | Implement a manual filter.
+-- You are provided with a value which user supplied and so you have
+-- to construct a Beam predicate involving that value and relevant response fields.
+manualFilter_
+    :: forall name backend a.
+       (Typeable a)
+    => (a -> MatchPredicate backend)
+    -> FilteringApp backend ('TyNamedParam name ('ManualFilter a))
+manualFilter_ = ManualFilteringApp
