@@ -1,6 +1,7 @@
 -- | Allows complex filtering on specified fields.
 module Servant.Util.Combinators.Filtering
-    ( FilterKind (..)
+    ( -- * General
+      FilterKind (..)
     , TyNamedFilter
     , FilteringParams
     , SupportedFilters
@@ -11,7 +12,7 @@ module Servant.Util.Combinators.Filtering
     , FilteringSpec (..)
     , noFilters
 
-     -- * Backends
+      -- * Backends
     , FilterBackend (..)
     , AutoFilterSupport (..)
     , FilteringApp (..)
@@ -23,7 +24,7 @@ module Servant.Util.Combinators.Filtering
     , filterOn
     , manualFilter
 
-     -- * Filter types
+      -- * Filter types
     , FilterMatching (..)
     , FilterComparing (..)
     , FilterOnLikeTemplate (..)
@@ -36,11 +37,16 @@ module Servant.Util.Combinators.Filtering
     , FilteringParamTypesOf
     , FilteringParamsOf
     , FilteringSpecOf
+
+      -- * Client
+    , mkFilteringSpec
+    , ($=)
+    , ($~)
     ) where
 
 import Servant.Util.Combinators.Filtering.Backend
 import Servant.Util.Combinators.Filtering.Base
-import Servant.Util.Combinators.Filtering.Client ()
+import Servant.Util.Combinators.Filtering.Client
 import Servant.Util.Combinators.Filtering.Filters
 import Servant.Util.Combinators.Filtering.Logging ()
 import Servant.Util.Combinators.Filtering.Server ()
