@@ -1,4 +1,1 @@
-import Universum
-
-main :: IO ()
-main = putTextLn "Test suite not yet implemented"
+{-# OPTIONS_GHC -F -pgmF hspec-discover -optF --module-name=Spec #-}

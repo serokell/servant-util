@@ -20,6 +20,7 @@ module Servant.Util.Combinators.Filtering.Base
     , AreAutoFilters (..)
     , FilteringValueParser (..)
     , parseFilteringValueAsIs
+    , unsupportedFilteringValue
     , autoFiltersParsers
 
     , FilteringParamTypesOf
@@ -81,6 +82,9 @@ newtype FilteringValueParser a = FilteringValueParser (Text -> Either Text a)
 parseFilteringValueAsIs :: FromHttpApiData a => FilteringValueParser a
 parseFilteringValueAsIs = FilteringValueParser parseUrlPiece
 
+unsupportedFilteringValue :: Text -> FilteringValueParser a
+unsupportedFilteringValue errMsg = FilteringValueParser (\_ -> Left errMsg)
+
 class BuildableAutoFilter (filter :: * -> *) where
     buildAutoFilter
         :: Buildable a => Text -> filter a -> Builder
@@ -100,6 +104,10 @@ class (Typeable filter, BuildableAutoFilter filter) =>
 
     mapAutoFilterValue
         :: (a -> b) -> filter a -> filter b
+    default mapAutoFilterValue
+        :: Functor filter => (a -> b) -> filter a -> filter b
+    mapAutoFilterValue = fmap
+
 
 -- | Multi-version of 'IsFilter'.
 class AreAutoFilters (filters :: [* -> *]) where

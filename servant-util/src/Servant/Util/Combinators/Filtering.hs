@@ -27,8 +27,8 @@ module Servant.Util.Combinators.Filtering
       -- * Filter types
     , FilterMatching (..)
     , FilterComparing (..)
-    , FilterOnLikeTemplate (..)
-    , LikeFormatter (..)
+    , FilterLike (..)
+    , LikePattern (..)
 
     , NumericFilterTypes
     , TextFilterTypes
@@ -50,3 +50,4 @@ import Servant.Util.Combinators.Filtering.Client
 import Servant.Util.Combinators.Filtering.Filters
 import Servant.Util.Combinators.Filtering.Logging ()
 import Servant.Util.Combinators.Filtering.Server ()
+import Servant.Util.Combinators.Filtering.Support

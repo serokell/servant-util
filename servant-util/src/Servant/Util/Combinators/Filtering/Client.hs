@@ -23,6 +23,7 @@ import Servant.Client.Core.Internal.Request (Request, appendToQueryString)
 
 import Servant.Util.Combinators.Filtering.Base
 import Servant.Util.Combinators.Filtering.Filters
+import Servant.Util.Combinators.Filtering.Support ()
 import Servant.Util.Common
 
 -------------------------------------------------------------------------

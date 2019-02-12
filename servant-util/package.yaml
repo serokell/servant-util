@@ -50,5 +50,9 @@ executables:
 tests:
   servant-util-test:
     <<: *test-common
+    dependencies:
+      - hspec
+      - servant-util
+      - QuickCheck
 
 <<: *default-extensions
