@@ -6,7 +6,7 @@ application first, which describes how to perform filtering over your rows:
 @
 filteringSpecApp
     :: FilteringSpecApp
-        (BeamFilterBackend syntax s)
+        (QExprFilterBackend syntax s)
         [ "course" ?: 'AutoFilter Course
         , "desc" ?: 'AutoFilter Text
         , "isAwesome" ?: 'ManualFilter Bool
@@ -22,10 +22,12 @@ filteringSpecApp =
 Annotating 'filterOn' and 'customFilter' calls with parameter name is fully optional
 and used only to visually disambiguate filters of the same types.
 
-Next, you use `matches_` to build a filtering expression understandable by Beam.
+Next, you use 'matches_' or 'filterGuard_' to build a filtering expression understandable
+by Beam.
 -}
 module Servant.Util.Beam.Postgres.Filtering
     ( matches_
+    , filtersGuard_
 
       -- * Re-exports
     , filterOn
@@ -34,34 +36,34 @@ module Servant.Util.Beam.Postgres.Filtering
 
 import Universum
 
-import Database.Beam.Backend.SQL (HasSqlValueSyntax, IsSql92ExpressionSyntax,
-                                  Sql92ExpressionValueSyntax)
-import Database.Beam.Query (HasSqlEqualityCheck, in_, val_, (&&.), (/=.), (<.), (<=.), (==.), (>.),
-                            (>=.))
+import Database.Beam.Backend.SQL (HasSqlValueSyntax, IsSql92ExpressionSyntax, IsSql92SelectSyntax,
+                                  Sql92ExpressionValueSyntax, Sql92SelectSelectTableSyntax,
+                                  Sql92SelectTableExpressionSyntax)
+import Database.Beam.Query (HasSqlEqualityCheck, Q, guard_, in_, val_, (&&.), (/=.), (<.), (<=.),
+                            (==.), (>.), (>=.))
 import Database.Beam.Query.Internal (QExpr)
 
 import Servant.Util.Combinators.Filtering
 
 -- | Implements filters via Beam query expressions ('QExpr').
-data BeamFilterBackend (syntax :: *) (s :: *)
+data QExprFilterBackend syntax s
 
 instance IsSql92ExpressionSyntax syntax =>
-         FilterBackend (BeamFilterBackend syntax s) where
+         FilterBackend (QExprFilterBackend syntax s) where
 
-    type AutoFilteredValue (BeamFilterBackend syntax s) a =
+    type AutoFilteredValue (QExprFilterBackend syntax s) a =
         QExpr syntax s a
 
-    type MatchPredicate (BeamFilterBackend syntax s) =
+    type MatchPredicate (QExprFilterBackend syntax s) =
         QExpr syntax s Bool
 
     trueMatchPreducate = val_ True
-
     conjunctMatchPredicates = (&&.)
 
 instance ( HasSqlValueSyntax (Sql92ExpressionValueSyntax syntax) a
          , HasSqlEqualityCheck syntax a
          ) =>
-         AutoFilterSupport (BeamFilterBackend syntax s) FilterMatching a where
+         AutoFilterSupport (QExprFilterBackend syntax s) FilterMatching a where
     autoFilterSupport = \case
         FilterMatching v -> (==. val_ v)
         FilterNotMatching v -> (/=. val_ v)
@@ -70,7 +72,7 @@ instance ( HasSqlValueSyntax (Sql92ExpressionValueSyntax syntax) a
 instance ( HasSqlValueSyntax (Sql92ExpressionValueSyntax syntax) a
          , IsSql92ExpressionSyntax syntax
          ) =>
-         AutoFilterSupport (BeamFilterBackend syntax s) FilterComparing a where
+         AutoFilterSupport (QExprFilterBackend syntax s) FilterComparing a where
     autoFilterSupport = \case
         FilterGT v -> (>. val_ v)
         FilterLT v -> (<. val_ v)
@@ -80,10 +82,43 @@ instance ( HasSqlValueSyntax (Sql92ExpressionValueSyntax syntax) a
 -- | Applies a whole filtering specification to a set of response fields.
 -- Resulting value can be put to 'guard_' or 'filter_' function.
 matches_
-    :: ( backend ~ BeamFilterBackend syntax s
+    :: ( backend ~ QExprFilterBackend syntax s
        , BackendApplySomeFilter backend params
        )
     => FilteringSpec params
     -> FilteringSpecApp backend params
     -> QExpr syntax s Bool
 matches_ = backendApplyFilters
+
+-- | Implements filters via Beam query monad ('Q').
+data QFilterBackend syntax (db :: (* -> *) -> *) s
+
+instance FilterBackend (QFilterBackend syntax db s) where
+
+    type AutoFilteredValue (QFilterBackend syntax db s) a =
+        QExpr (Sql92SelectTableExpressionSyntax (Sql92SelectSelectTableSyntax syntax)) s a
+
+    type MatchPredicate (QFilterBackend syntax db s) =
+        Q syntax db s ()
+
+    trueMatchPreducate = pass
+    conjunctMatchPredicates = (>>)
+
+instance ( select ~ Sql92SelectTableExpressionSyntax (Sql92SelectSelectTableSyntax syntax)
+         , IsSql92SelectSyntax syntax
+         , AutoFilterSupport (QExprFilterBackend select s) filter a
+         ) =>
+         AutoFilterSupport (QFilterBackend syntax db s) filter a where
+    autoFilterSupport =
+        guard_ ... autoFilterSupport @(QExprFilterBackend select s)
+
+-- | Applies a whole filtering specification to a set of response fields.
+-- Resulting value can be monadically binded with the remaining query (just like 'guard_').
+filtersGuard_
+    :: ( backend ~ QFilterBackend syntax db s
+       , BackendApplySomeFilter backend params
+       )
+    => FilteringSpec params
+    -> FilteringSpecApp backend params
+    -> Q syntax db s ()
+filtersGuard_ = backendApplyFilters
