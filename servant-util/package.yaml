@@ -26,6 +26,7 @@ dependencies:
 - time
 - reflection
 - universum
+- QuickCheck
 
 library:
   source-dirs: src

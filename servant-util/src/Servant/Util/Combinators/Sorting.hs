@@ -26,6 +26,7 @@ import Servant.API (FromHttpApiData (..))
 import Servant.API ((:>), QueryParam)
 import Servant.Client.Core (Client, HasClient (..))
 import Servant.Server (HasServer (..), Tagged (..), unTagged)
+import Test.QuickCheck (Arbitrary (..), choose, elements, vectorOf)
 import Text.Megaparsec ((<?>))
 import qualified Text.Megaparsec as P
 import qualified Text.Megaparsec.Char as P
@@ -137,7 +138,7 @@ list will be empty if user didn't pass "sortBy" query parameter at all.
 -}
 newtype SortingSpec (params :: [TyNamedParam *]) = SortingSpec
     { unSortingSpec :: [SortingItem]
-    } deriving (Default)
+    } deriving (Show, Default)
 
 -- | Ensure no name in entires repeat.
 sortingCheckDuplicates :: [SortingItem] -> Either Text ()
@@ -220,6 +221,20 @@ instance HasClient m subApi =>
          HasClient m (SortingParams params :> subApi) where
     type Client m (SortingParams params :> subApi) = Client m subApi
     clientWithRoute mp _ req = clientWithRoute mp (Proxy @subApi) req
+
+instance Arbitrary SortingOrder where
+    arbitrary = elements [Ascendant, Descendant]
+
+instance ReifySortingParams params =>
+         Arbitrary (SortingSpec params) where
+    arbitrary = do
+        let allowedNames = reifySortingParamsNames @params
+        let n = S.size allowedNames
+        k <- choose (0, n)
+        fmap SortingSpec . vectorOf k $ do
+            siName <- elements (toList allowedNames)
+            siOrder <- arbitrary
+            return SortingItem{..}
 
 -- | For a given return type of an endpoint get corresponding sorting params.
 -- This mapping is sensible, since we usually allow to sort only on fields appearing in
