@@ -20,7 +20,6 @@ import Control.Exception.Safe (handleAny)
 import Control.Monad.Error.Class (catchError, throwError)
 import Data.Default (Default (..))
 import Data.Reflection (Reifies (..), reify)
-import qualified Data.Text as T
 import qualified Data.Text.Buildable as B
 import qualified Data.Text.Lazy.Builder as B
 import Data.Time.Clock.POSIX (getPOSIXTime)
@@ -68,18 +67,28 @@ gray = dullColor White
 
 -- | Used to incrementally collect info about passed parameters.
 data ApiParamsLogInfo
-      -- | Parameters gathered at current stage
-    = ApiParamsLogInfo [Text]
+      -- | Parameters gathered at current stage.
+      -- The first field tells whether have we met '(:<|>)',
+      -- the second is path prefix itself,
+      -- the third field is the remaining part.
+    = ApiParamsLogInfo Bool [Text] [Text]
       -- | Parameters collection failed with reason
       --   (e.g. decoding error)
     | ApiNoParamsLogInfo Text
 
 instance Default ApiParamsLogInfo where
-    def = ApiParamsLogInfo mempty
+    def = ApiParamsLogInfo False [] []
 
 addParamLogInfo :: Text -> ApiParamsLogInfo -> ApiParamsLogInfo
-addParamLogInfo paramInfo (ApiParamsLogInfo infos) = ApiParamsLogInfo (paramInfo : infos)
-addParamLogInfo _ other@ApiNoParamsLogInfo{}       = other
+addParamLogInfo _ failed@ApiNoParamsLogInfo{} = failed
+addParamLogInfo paramInfo (ApiParamsLogInfo False path []) =
+    ApiParamsLogInfo False (paramInfo : path) []
+addParamLogInfo paramInfo (ApiParamsLogInfo inPrefix path infos) =
+    ApiParamsLogInfo inPrefix path (paramInfo : infos)
+
+setInPrefix :: ApiParamsLogInfo -> ApiParamsLogInfo
+setInPrefix failed@ApiNoParamsLogInfo{}    = failed
+setInPrefix (ApiParamsLogInfo _ path info) = ApiParamsLogInfo True path info
 
 -- | When it comes to logging responses, returned data may be very large.
 -- Log space is valuable (already in testnet we got truncated logs),
@@ -138,7 +147,9 @@ instance ( HasLoggingServer config api1 ctx
         inRouteServer
             @(LoggingApiRec config api1 :<|> LoggingApiRec config api2)
             route $
-            \(paramsInfo, f1 :<|> f2) -> (paramsInfo, f1) :<|> (paramsInfo, f2)
+            \(paramsInfo, f1 :<|> f2) ->
+                let paramsInfo' = setInPrefix paramsInfo
+                in (paramsInfo', f1) :<|> (paramsInfo', f2)
 
 instance ( KnownSymbol path
          , HasLoggingServer config res ctx
@@ -284,10 +295,12 @@ applyServantLogging configP methodP paramsInfo showResponse action = do
     log = liftIO ... clcLog $ reflect configP
     eParamLogs :: Either Text Text
     eParamLogs = case paramsInfo of
-        ApiParamsLogInfo info -> Right $
-            T.intercalate "\n" $ reverse info <&> \securedParamsInfo ->
-                "    " +| gray ":>"
-                |+ " " +| securedParamsInfo |+ ""
+        ApiParamsLogInfo _ path infos -> Right $
+            let pathPart = ("   " <> mconcat ((gray " :> " <>) <$> reverse path))
+                infoPart = reverse infos <&> \info ->
+                    "    " +| gray ":>"
+                    |+ " " +| info |+ ""
+            in unlines (pathPart : infoPart)
         ApiNoParamsLogInfo why -> Left why
     reportRequest :: RequestId -> Handler ()
     reportRequest reqId =
