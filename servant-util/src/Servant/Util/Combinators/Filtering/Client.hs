@@ -72,7 +72,7 @@ instance (HasClient m subApi, SomeFilterToReq params) =>
 -------------------------------------------------------------------------
 
 {- | Build a filtering specification.
-Used along with "OverloadedLabels" extension and `($)`/`($=)` operators.
+Used along with "OverloadedLabels" extension and @($)@ / @($=)@ operators.
 
 Example:
 
@@ -157,7 +157,7 @@ instance TypeError ('Text "Filter is missing") =>
 ($=) f = f . FilterMatching
 infixr 0 $=
 
--- | Construct a filter from a value with the same representation as expected.
+-- | Construct a filter from a value with the same representation as expected one.
 -- Helpful when newtypes are heavely used in API parameters.
 ($~) :: Coercible a b => (b -> SomeFilter params) -> a -> SomeFilter params
 ($~) f = f . coerce

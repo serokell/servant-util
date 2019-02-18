@@ -118,7 +118,7 @@ list will be empty if user didn't pass "sortBy" query parameter at all.
 -}
 newtype SortingSpec (params :: [TyNamedParam *]) = SortingSpec
     { unSortingSpec :: [SortingItem]
-    } deriving (Show, Default)
+    } deriving (Show)
 
 -- | Ensure no name in entires repeat.
 sortingCheckDuplicates :: [SortingItem] -> Either Text ()
@@ -271,6 +271,10 @@ sortingSpec = mkSortingSpec [asc #id]
 -}
 mkSortingSpec :: [SortingRequestItem params] -> SortingSpec params
 mkSortingSpec = fromList
+
+-- | By default 'noSorting' is used.
+instance Default (SortingSpec params) where
+    def = noSorting
 
 -- | Do not specify ordering.
 noSorting :: SortingSpec params

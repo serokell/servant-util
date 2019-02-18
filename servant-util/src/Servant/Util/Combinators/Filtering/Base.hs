@@ -148,14 +148,14 @@ instance Buildable a => Buildable (Text, SomeTypeAutoFilter a) where
 
 -- | Some filter for an item of type @a@.
 data TypeFilter (fk :: * -> FilterKind *) a where
+    -- | One of automatic filters for type @a@.
+    -- Filter type is guaranteed to be one of @SupportedFilters a@.
     TypeAutoFilter
         :: SomeTypeAutoFilter a -> TypeFilter 'AutoFilter a
-    -- ^ One of automatic filters for type @a@.
-    -- Filter type is guaranteed to be one of @SupportedFilters a@.
 
+    -- | Manually implemented filter.
     TypeManualFilter
         :: a -> TypeFilter 'ManualFilter a
-    -- ^ Manually implemented filter.
 
 -- | Some filter.
 -- This filter is guaranteed to match a type which is mentioned in @params@.
@@ -174,9 +174,11 @@ extendSomeFilter (SomeFilter f n) = SomeFilter f n
 newtype FilteringSpec (params :: [TyNamedFilter]) = FilteringSpec [SomeFilter params]
     deriving (IsList)
 
+-- | By default 'noFilters' is used.
 instance Default (FilteringSpec params) where
     def = noFilters
 
+-- | Return all items.
 noFilters :: FilteringSpec params
 noFilters = FilteringSpec []
 
