@@ -27,6 +27,7 @@ dependencies:
 - reflection
 - universum
 - QuickCheck
+- wai
 
 library:
   source-dirs: src
@@ -50,5 +51,9 @@ executables:
 tests:
   servant-util-test:
     <<: *test-common
+    dependencies:
+      - hspec
+      - servant-util
+      - QuickCheck
 
 <<: *default-extensions

@@ -1,5 +1,6 @@
 module Servant.Util.Common.Common
-    ( ApplicationRS
+    ( ApplicationLS
+    , ApplicationRS
     , ApiHasArgClass (..)
     , ApiHasArg
 
@@ -7,7 +8,7 @@ module Servant.Util.Common.Common
     , symbolValT
     ) where
 
-import Universum hiding (log)
+import Universum
 
 import qualified Data.Text.Buildable as B
 import GHC.TypeLits (KnownSymbol, symbolVal)
@@ -15,9 +16,12 @@ import Servant.API ((:>), Capture, QueryFlag, QueryParam, ReqBody)
 import Servant.Server (Handler (..), HasServer (..), Server)
 import qualified Servant.Server.Internal as SI
 
+type family ApplicationLS x where
+    ApplicationLS (a b) = a
+
 -- | Extract right side of type application.
-type family ApplicationRS api where
-    ApplicationRS (apiType a) = a
+type family ApplicationRS x where
+    ApplicationRS (a b) = b
 
 -- | Proves info about argument specifier of servant API.
 class ApiHasArgClass api where

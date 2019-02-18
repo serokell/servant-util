@@ -18,12 +18,9 @@ import Universum
 import Data.Char (isAlphaNum)
 import Data.Default (Default (..))
 import qualified Data.List as L
-import Data.Set (Set)
 import qualified Data.Set as S
 import Fmt (Buildable (..), fmt)
-import GHC.TypeLits (ErrorMessage (..), KnownSymbol, Symbol, TypeError, symbolVal)
-import Servant.API (FromHttpApiData (..))
-import Servant.API ((:>), QueryParam)
+import Servant.API ((:>), FromHttpApiData (..), QueryParam)
 import Servant.Client.Core (Client, HasClient (..))
 import Servant.Server (HasServer (..), Tagged (..), unTagged)
 import Test.QuickCheck (Arbitrary (..), choose, elements, vectorOf)
@@ -33,12 +30,6 @@ import qualified Text.Megaparsec.Char as P
 
 import Servant.Util.Combinators.Logging
 import Servant.Util.Common
-
--- | Pair of type and its name as it appears in API.
-data TyNamedParam a = TyNamedParam Symbol a
-
--- | Convenient type alias for 'TyNamedParam'.
-type (?:) = 'TyNamedParam
 
 {- | Servant API combinator which allows to accept sorting parameters as a query parameter.
 
@@ -98,26 +89,6 @@ instance Buildable SortingItem where
 
 deriving instance Buildable (SortingItemTagged param)
 
--- | Extract info from 'SortingParams'.
-class ReifySortingParams (params :: [TyNamedParam *]) where
-    -- | Get all expected parameter names.
-    reifySortingParamsNames :: Set Text
-
-instance ReifySortingParams '[] where
-    reifySortingParamsNames = mempty
-
-instance (KnownSymbol name, ReifySortingParams params, SortParamsContainNoName params name) =>
-         ReifySortingParams ('TyNamedParam name p ': params) where
-    reifySortingParamsNames =
-        toText (symbolVal @name Proxy) `S.insert` reifySortingParamsNames @params
-
-type family SortParamsContainNoName (params :: [TyNamedParam *]) name :: Constraint where
-    SortParamsContainNoName '[] name = ()
-    SortParamsContainNoName ('TyNamedParam name p ': params) name =
-        TypeError ('Text "Duplicate name in sorting parameters " ':$$: 'ShowType name)
-    SortParamsContainNoName ('TyNamedParam name p ': params) name' =
-        SortParamsContainNoName params name'
-
 -- | Tagged, because we want to retain list of allowed fields for parsing
 -- (in @instance FromHttpApiData@).
 type TaggedSortingItemsList allowed = Tagged (allowed :: [TyNamedParam *]) [SortingItem]
@@ -149,7 +120,7 @@ sortingCheckDuplicates items =
 
 -- | Consumes "sortBy" query parameter and fetches sorting parameters contained in it.
 instance ( HasServer subApi ctx
-         , ReifySortingParams params
+         , ReifyParamsNames params
          ) =>
          HasServer (SortingParams params :> subApi) ctx where
     type ServerT (SortingParams params :> subApi) m =
@@ -164,7 +135,7 @@ instance ( HasServer subApi ctx
 
 -- | Parse 'sort_by' query param.
 -- Following the format described in "Sorting" section of https://www.moesif.com/blog/technical/api-design/REST-API-Design-Filtering-Sorting-and-Pagination/
-instance ReifySortingParams allowed =>
+instance ReifyParamsNames allowed =>
          FromHttpApiData (TaggedSortingItemsList allowed) where
     parseUrlPiece =
         first (toText . P.parseErrorPretty) . second Tagged .
@@ -195,7 +166,7 @@ instance ReifySortingParams allowed =>
                 return SortingItem{..}
             ]
 
-        allowedParams = reifySortingParamsNames @allowed
+        allowedParams = reifyParamsNames @allowed
 
         paramNameParser = do
             name <- P.takeWhile1P (Just "sorting item name") isAlphaNum <?> "parameter name"
@@ -205,18 +176,19 @@ instance ReifySortingParams allowed =>
             return name
 
 instance ( HasLoggingServer config subApi ctx
-         , ReifySortingParams params
+         , ReifyParamsNames params
          ) =>
          HasLoggingServer config (SortingParams params :> subApi) ctx where
     routeWithLog =
         inRouteServer @(SortingParams params :> LoggingApiRec config subApi) route $
         \(paramsInfo, handler) sorting@(SortingSpec params) ->
-            let text = fmt . mconcat $ "sorting: " : L.intersperse " " (map build params)
-            in (addParamLogInfo text paramsInfo, handler sorting)
+            let paramLog
+                  | null params = "no sorting"
+                  | otherwise = fmt . mconcat $
+                                "sorting: " : L.intersperse " " (map build params)
+            in (addParamLogInfo paramLog paramsInfo, handler sorting)
 
 -- | We do not yet support passing sorting parameters in client.
--- We seem to be too far away from writing server-client tests in Haskell for now,
--- and I'm not sure whether this will ever be useful (@martoon).
 instance HasClient m subApi =>
          HasClient m (SortingParams params :> subApi) where
     type Client m (SortingParams params :> subApi) = Client m subApi
@@ -225,10 +197,10 @@ instance HasClient m subApi =>
 instance Arbitrary SortingOrder where
     arbitrary = elements [Ascendant, Descendant]
 
-instance ReifySortingParams params =>
+instance ReifyParamsNames params =>
          Arbitrary (SortingSpec params) where
     arbitrary = do
-        let allowedNames = reifySortingParamsNames @params
+        let allowedNames = reifyParamsNames @params
         let n = S.size allowedNames
         k <- choose (0, n)
         fmap SortingSpec . vectorOf k $ do

@@ -4,6 +4,7 @@
 _definitions:
   _top-level:
     - &meta
+        version:            0.1.0
         license:            MPL-2.0
         author:             Serokell
         maintainer:         hi@serokell.io
@@ -60,7 +61,7 @@ _definitions:
         source-dirs: src
 
     - &test-common
-        main:        Spec.hs
+        main:        Main.hs
         source-dirs: tests
 
         ghc-options:

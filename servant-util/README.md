@@ -78,7 +78,7 @@ For example, `GetBooks` from the example above can be extended as
 ```haskell
 
 type GetBooks
-    :> SortingParams ["isbn" ?: Word64, "name" ?: Text]
+    :> SortingParams ["isbn" ?: Isbn, "name" ?: Text]
     =  Get '[JSON] [Book]
 
 ```
@@ -105,13 +105,77 @@ type, you can extract it to instance of the dedicated type family helper:
 ```haskell
 
 type instance SortingParamTypesOf Book =
-    ["isbn" ?: Word64, "name" ?: Text]
+    ["isbn" ?: Isbn, "name" ?: Text]
 
 type GetBooks
     :> SortingParamsOf Book  -- same as `SortingParams (SortingParamTypesOf Book)`
     =  Get '[JSON] [Book]
 
 ```
+
+### Filtering
+
+This package provides support for many types of filtering: exact matching, comparisons,
+text search; these are called automatic filters. Complex filtering conditions which do
+not (and cannot) fall into one of the mentioned categories are also allowed and here they
+are called manual filters. When user specifies multiple filters, their conjunction is
+applied.
+
+Let's consider filters on the previous example. Your API should be extended with
+`FilteringParams` combinator which is pretty similar to `SortingParams`.
+
+```haskell
+
+type GetBooks
+    :> FilteringParams ["isbn" ?: 'AutoFilter Isbn, "name" ?: 'AutoFilter Text]
+    =  Get '[JSON] [Book]
+
+```
+
+Your endpoint implementation will be provided with `FilteringSpec` argument. Note that
+this time parameters list contains not only parameter name and type, but also the type of
+filter.
+
+Just like for sorting, here you can use `SortingParamTypesOf` type family to reduce the
+boilerplate.
+
+Now you need to tell which automatic filter types are allowed for your types:
+
+```haskell
+
+type SupportedFilters Isbn = '[FilterMatching, FilterComparing]
+type SupportedFilters Text = '[FilterMatching, FilterComparing]
+-- the latter is already defined in this library
+
+```
+
+On the frontend side the following query parameters will be allowed:
+
+* `isbn=12345` - plain matching filter.
+* `isbn[eq]=12345` - same as above.
+* `isbn[neq]=12345` - values not equal to the given one.
+* `isbn[in]=[12345,23456]` - any value from the given list matches.
+* `isbn[gt]=12345` - higher values are allowed.
+* `isbn[lte]=12345` - the opposite to the previous predicate.
+* `name[lte]=12345` - the opposite to the previous predicate.
+
+Now let's suppose you need to support on your server backend a much more complex
+predicate, for instance, book name is longer than 10 characters. You can either define
+your own filter or use a manual one; let's demonstrate the latter case:
+
+```haskell
+
+type GetBooks
+    :> FilteringParams ["hasLongName" ?: ManualFilter Bool]
+    =  Get '[JSON] [Book]
+
+```
+
+This way user can supply only `hasLongName=false` or `hasLongName=true` query parameter,
+but filter implementation can be arbitrarily complex (see other packages for example).
+
+If for any reason you need to construct a `FilteringSpec` manually, take a look at
+`Servant.Util.Combinators.Filtering.Client` module.
 
 ### Pagination
 
