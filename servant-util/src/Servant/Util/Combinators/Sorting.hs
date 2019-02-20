@@ -178,7 +178,7 @@ instance ReifyParamsNames allowed =>
                 return SortingItem{..}
             ]
 
-        allowedParams = reifyParamsNames @allowed
+        allowedParams = reifyParamsNamesSet @allowed
 
         paramNameParser = do
             name <- P.takeWhile1P (Just "sorting item name") isAlphaNum <?> "parameter name"
