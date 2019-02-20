@@ -99,11 +99,12 @@ buildListForResponse
     :: Buildable (ForResponseLog x)
     => (forall a. [a] -> [a]) -> ForResponseLog [x] -> B.Builder
 buildListForResponse truncList (ForResponseLog l) =
-    let lt = truncList l
+    let startNf = if null l then "" else "\n"
+        lt = truncList l
         diff = length l - length lt
         mMore | diff == 0 = ""
               | otherwise = "\n    and " +| diff |+ " entries more..."
-    in  "\n" +| blockListF (map ForResponseLog lt) |+ mMore
+    in  startNf +| blockListF (map ForResponseLog lt) |+ mMore
 
 buildForResponse :: Buildable a => ForResponseLog a -> B.Builder
 buildForResponse = B.build . unForResponseLog
