@@ -33,18 +33,18 @@ type family TyNamedParamsNames (params :: [TyNamedParam k]) :: [Symbol] where
 -- | Extract info from 'SortingParams'.
 class ReifyParamsNames (params :: [TyNamedParam k]) where
     -- | Get all expected parameter names.
-    reifyParamsNamesP :: Proxy params -> Set Text
+    reifyParamsNames' :: Set Text
 
 instance ReifyParamsNames '[] where
-    reifyParamsNamesP _ = mempty
+    reifyParamsNames' = mempty
 
 instance (KnownSymbol name, ReifyParamsNames params, ParamsContainNoName params name) =>
-         ReifyParamsNames ('TyNamedParam name p ': params) where
-    reifyParamsNamesP p =
-        toText (symbolVal @name Proxy) `S.insert` reifyParamsNamesP p
+         ReifyParamsNames ('TyNamedParam name (p :: k) ': params) where
+    reifyParamsNames' =
+        toText (symbolVal @name Proxy) `S.insert` reifyParamsNames' @k @params
 
 reifyParamsNames :: forall params. ReifyParamsNames params => Set Text
-reifyParamsNames = reifyParamsNamesP (Proxy @params)
+reifyParamsNames = reifyParamsNames' @_ @params
 
 type family ParamsContainNoName (params :: [TyNamedParam k]) name :: Constraint where
     ParamsContainNoName '[] name = ()
