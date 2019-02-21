@@ -9,13 +9,14 @@ module Servant.Util.Common.PolyKinds
     , TyNamedParamsNames
     , ReifyParamsNames (..)
     , reifyParamsNames
+    , LookupParam
     , Elem
     ) where
 
 import qualified Data.Set as S
 import Universum
 
-import GHC.TypeLits (ErrorMessage (..), KnownSymbol, Symbol, TypeError, symbolVal)
+import GHC.TypeLits (AppendSymbol, ErrorMessage (..), KnownSymbol, Symbol, TypeError, symbolVal)
 
 -- | Pair of type and its name as it appears in API.
 data TyNamedParam a = TyNamedParam Symbol a
@@ -45,6 +46,15 @@ instance (KnownSymbol name, ReifyParamsNames params, ParamsContainNoName params 
 
 reifyParamsNames :: forall params. ReifyParamsNames params => Set Text
 reifyParamsNames = reifyParamsNames' @_ @params
+
+type family LookupParam (desc :: Symbol) (name :: Symbol)
+                        (params :: [TyNamedParam k]) :: k where
+    LookupParam desc name '[] =
+        TypeError ('Text ("No " `AppendSymbol` desc `AppendSymbol` " with name ")
+                   ':<>: 'ShowType name ':<>: 'Text " found")
+    LookupParam desc name ('TyNamedParam name a ': params) = a
+    LookupParam desc name ('TyNamedParam name0 a ': params) =
+        LookupParam desc name params
 
 type family ParamsContainNoName (params :: [TyNamedParam k]) name :: Constraint where
     ParamsContainNoName '[] name = ()

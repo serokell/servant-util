@@ -20,7 +20,7 @@ module Servant.Util.Combinators.Filtering.Backend
 import Universum
 
 import Data.Kind (type (*))
-import Data.Typeable (cast, gcast1)
+import Data.Typeable (gcast1)
 import GHC.TypeLits (KnownSymbol)
 
 import Servant.Util.Combinators.Filtering.Base
@@ -161,8 +161,8 @@ instance ( Typeable fk, Typeable a
     backendApplySomeFilter' (app `HCons` fields) (SomeFilter name filtr) = asum
         [ do
           guard (symbolValT @name == name)
-          let filtr' :: TypeFilter fk a =
-                cast filtr ?: error "Something is wrong, failed to cast filter!"
+          let filtr' = castTypeFilter filtr
+                    ?: error "Something is wrong, failed to cast filter!"
           return $ backendApplyTypeFilter app filtr'
 
         , backendApplySomeFilter' @backend @params fields (SomeFilter name filtr)

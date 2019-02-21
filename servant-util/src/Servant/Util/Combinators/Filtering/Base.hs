@@ -14,6 +14,7 @@ module Servant.Util.Combinators.Filtering.Base
     , TypeFilter (..)
     , SomeFilter (..)
     , extendSomeFilter
+    , castTypeFilter
 
     , BuildableAutoFilter (..)
     , IsAutoFilter (..)
@@ -31,6 +32,7 @@ module Servant.Util.Combinators.Filtering.Base
 import Universum
 
 import qualified Data.Map as M
+import Data.Typeable (cast)
 import Fmt (Buildable (..),  Builder,)
 import Data.Kind (type (*))
 import Servant (FromHttpApiData(..), ToHttpApiData (..))
@@ -156,6 +158,12 @@ data TypeFilter (fk :: * -> FilterKind *) a where
     -- | Manually implemented filter.
     TypeManualFilter
         :: a -> TypeFilter 'ManualFilter a
+
+castTypeFilter
+    :: forall fk1 a1 fk2 a2.
+       (Typeable fk1, Typeable a1, Typeable fk2, Typeable a2)
+    => TypeFilter fk1 a1 -> Maybe (TypeFilter fk2 a2)
+castTypeFilter = cast
 
 -- | Some filter.
 -- This filter is guaranteed to match a type which is mentioned in @params@.

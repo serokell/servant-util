@@ -3,6 +3,7 @@
 {-# LANGUAGE TypeInType       #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
+-- | Helpers for defining filters manually.
 module Servant.Util.Combinators.Filtering.Construction
     ( mkFilteringSpec
     , ($=)
@@ -94,10 +95,12 @@ instance MkSomeFilter name filter origParams params =>
          MkSomeFilter name filter origParams (param ': params) where
     mkSomeFilter filter = coerce $ mkSomeFilter @name @filter @origParams @params filter
 
+-- | Filter can be raised to 'SomeFilter' which is part of 'FilteringSpec'.
 instance MkSomeFilter name filter params params =>
          IsLabel name (filter -> SomeFilter params) where
     fromLabel = mkSomeFilter @name @_ @params
 
+-- | Hint to provide a filter itself.
 instance TypeError ('Text "Filter is missing") =>
          IsLabel name (SomeFilter params) where
     fromLabel = error "impossible"

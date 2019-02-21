@@ -38,10 +38,13 @@ module Servant.Util.Combinators.Filtering
     , FilteringParamsOf
     , FilteringSpecOf
 
-      -- * Client
+      -- * Manual construction
     , mkFilteringSpec
     , ($=)
     , ($~)
+
+      -- * Filter extraction
+    , manualFilterValue
     ) where
 
 import Servant.Util.Combinators.Filtering.Backend
@@ -49,6 +52,7 @@ import Servant.Util.Combinators.Filtering.Base
 import Servant.Util.Combinators.Filtering.Client ()
 import Servant.Util.Combinators.Filtering.Construction
 import Servant.Util.Combinators.Filtering.Filters
+import Servant.Util.Combinators.Filtering.Getters
 import Servant.Util.Combinators.Filtering.Logging ()
 import Servant.Util.Combinators.Filtering.Server ()
 import Servant.Util.Combinators.Filtering.Support
