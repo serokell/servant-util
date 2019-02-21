@@ -175,7 +175,7 @@ This way user can supply only `hasLongName=false` or `hasLongName=true` query pa
 but filter implementation can be arbitrarily complex (see other packages for example).
 
 If for any reason you need to construct a `FilteringSpec` manually, take a look at
-`Servant.Util.Combinators.Filtering.Client` module.
+`Servant.Util.Combinators.Filtering.Construction` module.
 
 ### Pagination
 
