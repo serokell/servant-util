@@ -52,17 +52,13 @@ import Servant.Util.Combinators.Filtering.Filters.Like
 -- | Implements filters via Beam query expressions ('QExpr').
 data QExprFilterBackend syntax s
 
-instance IsSql92ExpressionSyntax syntax =>
-         FilterBackend (QExprFilterBackend syntax s) where
+instance FilterBackend (QExprFilterBackend syntax s) where
 
     type AutoFilteredValue (QExprFilterBackend syntax s) a =
         QExpr syntax s a
 
     type MatchPredicate (QExprFilterBackend syntax s) =
         QExpr syntax s Bool
-
-    trueMatchPreducate = val_ True
-    conjunctMatchPredicates = (&&.)
 
 instance ( HasSqlValueSyntax (Sql92ExpressionValueSyntax syntax) a
          , HasSqlEqualityCheck syntax a
@@ -121,11 +117,12 @@ instance ( IsSql92ExpressionSyntax syntax
 matches_
     :: ( backend ~ QExprFilterBackend syntax s
        , BackendApplySomeFilter backend params
+       , IsSql92ExpressionSyntax syntax
        )
     => FilteringSpec params
     -> FilteringSpecApp backend params
     -> QExpr syntax s Bool
-matches_ = backendApplyFilters
+matches_ = foldr (&&.) (val_ True) ... backendApplyFilters
 
 -- | Implements filters via Beam query monad ('Q').
 data QFilterBackend syntax (db :: (* -> *) -> *) s
@@ -137,9 +134,6 @@ instance FilterBackend (QFilterBackend syntax db s) where
 
     type MatchPredicate (QFilterBackend syntax db s) =
         Q syntax db s ()
-
-    trueMatchPreducate = pass
-    conjunctMatchPredicates = (>>)
 
 instance ( select ~ Sql92SelectTableExpressionSyntax (Sql92SelectSelectTableSyntax syntax)
          , IsSql92SelectSyntax syntax
@@ -158,4 +152,4 @@ filtersGuard_
     => FilteringSpec params
     -> FilteringSpecApp backend params
     -> Q syntax db s ()
-filtersGuard_ = backendApplyFilters
+filtersGuard_ = sequence_ ... backendApplyFilters

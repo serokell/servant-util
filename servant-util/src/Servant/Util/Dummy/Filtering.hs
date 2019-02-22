@@ -40,12 +40,8 @@ import Servant.Util.Combinators.Filtering
 data DummyFilterBackend
 
 instance FilterBackend DummyFilterBackend where
-
     type AutoFilteredValue DummyFilterBackend a = a
     type MatchPredicate DummyFilterBackend = Bool
-
-    trueMatchPreducate = True
-    conjunctMatchPredicates = (&&)
 
 instance Eq a => AutoFilterSupport DummyFilterBackend FilterMatching a where
     autoFilterSupport = \case
@@ -69,4 +65,4 @@ matches
     => FilteringSpec params
     -> FilteringSpecApp backend params
     -> Bool
-matches = backendApplyFilters
+matches = and ... backendApplyFilters

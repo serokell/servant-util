@@ -37,20 +37,6 @@ class FilterBackend backend where
     -- Should have a 'Monoid' instance which forms a predicates conjunction.
     type MatchPredicate backend
 
-    -- | A match result when no filters applied.
-    trueMatchPreducate
-        :: MatchPredicate backend
-
-    -- | Conjunction of match results.
-    conjunctMatchPredicates
-        :: MatchPredicate backend
-        -> MatchPredicate backend
-        -> MatchPredicate backend
-
-    -- | Fold multiple match results.
-    concatMatchPredicates :: [MatchPredicate backend] -> MatchPredicate backend
-    concatMatchPredicates = foldl (conjunctMatchPredicates @backend) (trueMatchPreducate @backend)
-
 -- | Implementation of auto filter we provide.
 type AutoFilterImpl backend a =
     AutoFilteredValue backend a -> MatchPredicate backend
@@ -185,9 +171,9 @@ backendApplyFilters
        BackendApplySomeFilter backend params
     => FilteringSpec params
     -> FilteringSpecApp backend params
-    -> MatchPredicate backend
+    -> [MatchPredicate backend]
 backendApplyFilters (FilteringSpec filters) app =
-    concatMatchPredicates @backend $ map (backendApplySomeFilter app) filters
+    map (backendApplySomeFilter app) filters
 
 -------------------------------------------------------------------------
 -- Building filters
