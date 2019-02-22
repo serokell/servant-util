@@ -13,7 +13,7 @@ import Database.Beam.Query (asc_, desc_)
 import Database.Beam.Query.Internal (QExpr, QOrd)
 import GHC.TypeLits (KnownSymbol)
 
-import Servant.Util.Combinators.Sorting
+import Servant.Util.Combinators.Sorting.Base
 import Servant.Util.Common
 
 -- | Under the hood we don't really care about the type we are sorting on.
