@@ -12,6 +12,7 @@ dependencies:
 - data-default
 - fmt
 - http-types
+- lens
 - megaparsec
 - mtl
 - pretty-terminal
@@ -21,6 +22,8 @@ dependencies:
 - servant-client-core
 - servant-generic
 - servant-server
+- servant-swagger
+- swagger2
 - text
 - text-format
 - time

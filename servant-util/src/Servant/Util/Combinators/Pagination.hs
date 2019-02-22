@@ -9,10 +9,13 @@ module Servant.Util.Combinators.Pagination
 
 import Universum
 
+import Control.Lens ((<>~), (?~))
 import Data.Default (Default (..))
+import qualified Data.Swagger as S
 import qualified Data.Text as T
 import Servant ((:>), HasServer (..), QueryParam)
 import Servant.Client (HasClient (..))
+import Servant.Swagger (HasSwagger (..))
 
 import Servant.Util.Combinators.Logging
 import Servant.Util.Common
@@ -101,3 +104,34 @@ instance HasClient m subApi =>
         clientWithRoute mp (Proxy @(PaginationParamsExpanded subApi)) req
             (guard (psOffset > 0) $> psOffset)
             psLimit
+
+instance HasSwagger api => HasSwagger (PaginationParams :> api) where
+    toSwagger _ = toSwagger (Proxy @api)
+        & S.allOperations . S.parameters <>~ [S.Inline offsetParam, S.Inline limitParam]
+      where
+        offsetParam :: S.Param
+        limitParam :: S.Param
+        offsetParam = mempty
+            & S.name .~ "offset"
+            & S.description ?~ "Pagination parameter. How many items to skip from \
+                               \the beginning."
+            & S.required ?~ False
+            & S.schema .~ S.ParamOther (mempty
+                & S.in_ .~ S.ParamQuery
+                & S.paramSchema .~ offsetParamSchema
+                )
+        offsetParamSchema = mempty
+            & S.type_ .~ S.SwaggerInteger
+            & S.format ?~ "int32"
+
+        limitParam = mempty
+            & S.name .~ "limit"
+            & S.description ?~ "Pagination parameter. Maximum number of items to return."
+            & S.required ?~ False
+            & S.schema .~ S.ParamOther (mempty
+                & S.in_ .~ S.ParamQuery
+                & S.paramSchema .~ limitParamSchema
+                )
+        limitParamSchema = mempty
+            & S.type_ .~ S.SwaggerInteger
+            & S.format ?~ "int32"

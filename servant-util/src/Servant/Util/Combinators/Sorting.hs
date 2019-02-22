@@ -20,10 +20,12 @@ module Servant.Util.Combinators.Sorting
 
 import Universum
 
+import Control.Lens ((<>~), (?~))
 import Data.Char (isAlphaNum)
 import Data.Default (Default (..))
 import qualified Data.List as L
 import qualified Data.Set as S
+import qualified Data.Swagger as S
 import qualified Data.Text as T
 import Fmt (Buildable (..), fmt)
 import GHC.Exts (IsList, fromList)
@@ -32,6 +34,7 @@ import GHC.TypeLits (ErrorMessage (..), KnownSymbol, Symbol, TypeError)
 import Servant.API ((:>), FromHttpApiData (..), QueryParam, ToHttpApiData (..))
 import Servant.Client.Core (Client, HasClient (..))
 import Servant.Server (HasServer (..), Tagged (..), unTagged)
+import Servant.Swagger (HasSwagger (..))
 import Test.QuickCheck (Arbitrary (..), elements, infiniteList, shuffle, sublistOf)
 import Text.Megaparsec ((<?>))
 import qualified Text.Megaparsec as P
@@ -175,7 +178,7 @@ instance ReifyParamsNames allowed =>
                 return SortingItem{..}
             ]
 
-        allowedParams = reifyParamsNames @allowed
+        allowedParams = reifyParamsNamesSet @allowed
 
         paramNameParser = do
             name <- P.takeWhile1P (Just "sorting item name") isAlphaNum <?> "parameter name"
@@ -196,6 +199,38 @@ instance ( HasLoggingServer config subApi ctx
                   | otherwise = fmt . mconcat $
                                 "sorting: " : L.intersperse " " (map build params)
             in (addParamLogInfo paramLog paramsInfo, handler sorting)
+
+instance (HasSwagger api, ReifyParamsNames params) =>
+         HasSwagger (SortingParams params :> api) where
+    toSwagger _ = toSwagger (Proxy @api)
+        & S.allOperations . S.parameters <>~ [S.Inline param]
+      where
+        param = mempty
+            & S.name .~ "sortBy"
+            & S.description ?~ T.unlines
+                [ "Allows lexicographical sorting on fields."
+                , "General format is one of:"
+                , "  * `+field1,-field2`"
+                , "  * `asc(field1),desc(field2)`"
+                , ""
+                , " Fields allowed for this endpoint: " <> allowedFieldsDesc
+                ]
+            & S.required ?~ False
+            & S.schema .~ S.ParamOther (mempty
+                & S.in_ .~ S.ParamQuery
+                & S.paramSchema .~ paramSchema
+                )
+        paramSchema = mempty
+            & S.type_ .~ S.SwaggerString
+            & S.pattern ?~ "^" <> fieldPattern <> "(," <> fieldPattern <> ")*" <> "$"
+        fieldPattern =
+            "(" <> "[+-](" <> allowedFieldsPattern <> ")+" <> "|" <>
+            "(asc|desc)\\((" <> allowedFieldsPattern <> ")+\\))"
+        allowedFields = reifyParamsNames @params
+        allowedFieldsDesc =
+            T.intercalate ", " $ map ((<> "`") . ("`" <>)) (toList allowedFields)
+        allowedFieldsPattern = T.intercalate "|" (toList allowedFields)
+
 
 -- | For a given return type of an endpoint get corresponding sorting params.
 -- This mapping is sensible, since we usually allow to sort only on fields appearing in
