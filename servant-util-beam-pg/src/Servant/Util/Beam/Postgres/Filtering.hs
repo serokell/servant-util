@@ -28,13 +28,11 @@ by Beam.
 module Servant.Util.Beam.Postgres.Filtering
     ( matches_
     , filtersGuard_
+    , filterOn
+    , manualFilter
 
       -- * Internals
     , likeToSqlPattern
-
-      -- * Re-exports
-    , filterOn
-    , manualFilter
     ) where
 
 import Universum
@@ -46,8 +44,9 @@ import Database.Beam.Query (HasSqlEqualityCheck, Q, guard_, in_, like_, val_, (&
                             (<=.), (==.), (>.), (>=.))
 import Database.Beam.Query.Internal (QExpr)
 
-import Servant.Util.Combinators.Filtering
-import Servant.Util.Combinators.Filtering.Filters.Like
+import Servant.Util.Combinators.Filtering.Base
+import Servant.Util.Combinators.Filtering.Backend
+import Servant.Util.Combinators.Filtering.Filters
 
 -- | Implements filters via Beam query expressions ('QExpr').
 data QExprFilterBackend syntax s

@@ -30,11 +30,15 @@ filterObjects filters = filter (matches filters . filteringSpecApp) allObjects
 -}
 module Servant.Util.Dummy.Filtering
     ( matches
+    , filterOn
+    , manualFilter
     ) where
 
 import Universum
 
-import Servant.Util.Combinators.Filtering
+import Servant.Util.Combinators.Filtering.Backend
+import Servant.Util.Combinators.Filtering.Base
+import Servant.Util.Combinators.Filtering.Filters
 
 -- | Implements filters via Beam query expressions ('QExpr').
 data DummyFilterBackend
