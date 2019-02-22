@@ -11,6 +11,7 @@ module Servant.Util.Combinators.Logging
     , ApiHasArgClass (..)
     , ApiCanLogArg (..)
     , addParamLogInfo
+    , setInPrefix
     , serverWithLogging
     ) where
 
@@ -20,6 +21,7 @@ import Control.Exception.Safe (handleAny)
 import Control.Monad.Error.Class (catchError, throwError)
 import Data.Default (Default (..))
 import Data.Reflection (Reifies (..), reify)
+import qualified Data.Text as T
 import qualified Data.Text.Buildable as B
 import qualified Data.Text.Lazy.Builder as B
 import Data.Time.Clock.POSIX (getPOSIXTime)
@@ -87,8 +89,9 @@ addParamLogInfo paramInfo (ApiParamsLogInfo inPrefix path infos) =
     ApiParamsLogInfo inPrefix path (paramInfo : infos)
 
 setInPrefix :: ApiParamsLogInfo -> ApiParamsLogInfo
-setInPrefix failed@ApiNoParamsLogInfo{}    = failed
-setInPrefix (ApiParamsLogInfo _ path info) = ApiParamsLogInfo True path info
+setInPrefix failed@ApiNoParamsLogInfo{}     = failed
+setInPrefix infos@(ApiParamsLogInfo _ [] _) = infos
+setInPrefix (ApiParamsLogInfo _ path info)  = ApiParamsLogInfo True path info
 
 -- | When it comes to logging responses, returned data may be very large.
 -- Log space is valuable (already in testnet we got truncated logs),
@@ -212,7 +215,7 @@ paramRouteWithLog =
         let paramVal = toLogParamInfo (Proxy @subApi) a
             paramName = apiArgName $ Proxy @subApi
             paramInfo = paramName |+ ": " +| paramVal |+ ""
-        in addParamLogInfo paramInfo
+        in addParamLogInfo paramInfo . setInPrefix
 
 instance ( HasServer (subApi :> res) ctx
          , HasServer (subApi :> LoggingApiRec config res) ctx
@@ -297,11 +300,13 @@ applyServantLogging configP methodP paramsInfo showResponse action = do
     eParamLogs :: Either Text Text
     eParamLogs = case paramsInfo of
         ApiParamsLogInfo _ path infos -> Right $
-            let pathPart = ("   " <> mconcat ((gray " :> " <>) <$> reverse path))
+            let pathPart =
+                    "    " <> gray ":>" <> " " <>
+                    T.intercalate (gray "/") (reverse path)
                 infoPart = reverse infos <&> \info ->
                     "    " +| gray ":>"
                     |+ " " +| info |+ ""
-            in unlines (pathPart : infoPart)
+            in T.intercalate "\n" (pathPart : infoPart)
         ApiNoParamsLogInfo why -> Left why
     reportRequest :: RequestId -> Handler ()
     reportRequest reqId =
