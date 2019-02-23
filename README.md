@@ -10,8 +10,10 @@ Run `stack build` to build everything.
 
 ## Usage [↑](#-patak)
 
-Start from reading [the core package usage](/servant-util/README.md) which contains building blocks for your API.
-When it comes to a server implementation, choose the package appropriate for your needs.
+Start from reading [the core package usage](/servant-util/README.md) which contains
+building blocks for your API and their simple implementations for a server backend.
+Efficient implementations based on specific types of storages are located in adjacent
+packages like `servant-util-beam-pg`.
 
 ## For Contributors [↑](#-patak)
 

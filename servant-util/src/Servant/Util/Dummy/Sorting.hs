@@ -31,29 +31,36 @@ module Servant.Util.Dummy.Sorting
 
 import Universum
 
+import Data.Typeable (cast)
+
 import Servant.Util.Combinators.Sorting.Backend
 import Servant.Util.Combinators.Sorting.Base
 
-
+-- | Implements sorting for beam-postgres package.
 data DummySortingBackend
 
-data SomeOrd = forall a. Ord a => SomeOrd a
+data SomeOrd = forall a. (Typeable a, Ord a) => SomeOrd a
+
+-- | Unsafe instance which assumes that 'SomeOrd' contains the same items inside.
+instance Eq SomeOrd where
+    (==) = (== EQ) ... compare
+
+-- | Unsafe instance which assumes that 'SomeOrd' contains the same items inside.
+instance Ord SomeOrd where
+    SomeOrd a `compare` SomeOrd b =
+        let b' = cast b ?: error "Compared `SomeOrd`s are different inside"
+        in a `compare` b'
 
 instance SortingBackend DummySortingBackend where
     type SortedValue DummySortingBackend a = a
     type BackendOrdering DummySortingBackend = SomeOrd
 
-    type SortedValueConstraint DummySortingBackend a = Ord a
+    type SortedValueConstraint DummySortingBackend a = (Typeable a, Ord a)
 
-    fieldSort field = SortingApp $ \(SortingItemTagged SortingItem{..}) ->
-        case siOrder of
-                Ascendant  -> SomeOrd field
-                Descendant -> SomeOrd (Down field)
-
-ordering
-    :: (ApplyToSortItem backend params, backend ~ DummySortingBackend)
-    => SortingSpec params -> SortingSpecApp backend params -> [SomeOrd]
-ordering = backendApplySorting
+    fieldSort field = SortingApp $ \(SortingItemTagged (SortingItem _name order)) ->
+        case order of
+            Ascendant  -> SomeOrd field
+            Descendant -> SomeOrd (Down field)
 
 -- | Applies a whole filtering specification to a set of response fields.
 -- Resulting value can be put to 'filter' function.
@@ -62,4 +69,4 @@ sortBySpec
     => SortingSpec params -> (a -> SortingSpecApp backend params) -> [a] -> [a]
 sortBySpec spec mkApp values =
     map fst . sortOn snd $
-    map (id &&& ordering spec . mkApp) values
+    map (id &&& backendApplySorting spec . mkApp) values

@@ -29,8 +29,8 @@ instance IsSql92OrderingSyntax syntax =>
     type BackendOrdering (BeamSortingBackend syntax s) =
         QOrd syntax s Void
 
-    fieldSort field = SortingApp $ \(SortingItemTagged SortingItem{..}) ->
-        let order = case siOrder of
+    fieldSort field = SortingApp $ \(SortingItemTagged (SortingItem _name order)) ->
+        let applyOrder = case order of
                 Ascendant  -> asc_
                 Descendant -> desc_
 
@@ -41,7 +41,7 @@ instance IsSql92OrderingSyntax syntax =>
         --     Just NullsFirst -> nullsFirst_
         --     Just NullsLast  -> nullsLast_
 
-        in order (coerce field)
+        in applyOrder (coerce field)
 
 -- | Applies 'orderBy_' according to the given sorting specification.
 sortBy_

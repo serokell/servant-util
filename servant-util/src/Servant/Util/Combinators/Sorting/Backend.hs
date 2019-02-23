@@ -33,7 +33,7 @@ class SortingBackend backend where
     fieldSort
         :: SortedValueConstraint backend a
         => SortedValue backend a
-        -> SortingApp backend param
+        -> SortingApp backend ('TyNamedParam name a)
 
 -- | A function defining a way to apply the given 'SortingItem' (which is sorting
 -- order on a single parameter).
