@@ -2,27 +2,14 @@
 module Servant.Util.Combinators.Filtering
     ( -- * General
       FilterKind (..)
-    , TyNamedFilter
     , FilteringParams
     , SupportedFilters
-    , IsAutoFilter (..)
-    , SomeTypeAutoFilter (..)
-    , TypeFilter (..)
-    , SomeFilter (..)
     , FilteringSpec (..)
-    , noFilters
 
-      -- * Backends
-    , FilterBackend (..)
-    , AutoFilterSupport (..)
-    , FilteringApp (..)
-    , FilteringSpecApp
-    , BackendApplySomeFilter
-    , typeAutoFiltersSupport
-    , backendApplyFilters
-
-    , filterOn
-    , manualFilter
+      -- * Shortcuts
+    , FilteringParamTypesOf
+    , FilteringParamsOf
+    , FilteringSpecOf
 
       -- * Filter types
     , FilterMatching (..)
@@ -34,25 +21,17 @@ module Servant.Util.Combinators.Filtering
     , TextFilterTypes
     , DatetimeFilterTypes
 
-    , FilteringParamTypesOf
-    , FilteringParamsOf
-    , FilteringSpecOf
-
       -- * Manual construction
     , mkFilteringSpec
+    , noFilters
     , ($=)
     , ($~)
-
-      -- * Filter extraction
-    , manualFilterValue
     ) where
 
-import Servant.Util.Combinators.Filtering.Backend
 import Servant.Util.Combinators.Filtering.Base
 import Servant.Util.Combinators.Filtering.Client ()
 import Servant.Util.Combinators.Filtering.Construction
 import Servant.Util.Combinators.Filtering.Filters
-import Servant.Util.Combinators.Filtering.Getters
 import Servant.Util.Combinators.Filtering.Logging ()
 import Servant.Util.Combinators.Filtering.Server ()
 import Servant.Util.Combinators.Filtering.Support
