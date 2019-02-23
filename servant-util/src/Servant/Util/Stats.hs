@@ -7,7 +7,7 @@ import Universum
 
 import GHC.TypeLits (ErrorMessage (..), Symbol, TypeError)
 import Network.HTTP.Types.Method (Method, StdMethod)
-import Servant ((:<|>), (:>), ReflectMethod (..), Verb)
+import Servant ((:<|>), (:>), EmptyAPI, Raw, ReflectMethod (..), Verb)
 
 -------------------------------------------------------------------------
 -- CORS methods coherence
@@ -32,6 +32,8 @@ type family ContainsOnlyMethods (methods :: [StdMethod]) api :: Constraint where
     ContainsOnlyMethods ms (api1 :<|> api2) = (ContainsOnlyMethods ms api1,
                                                ContainsOnlyMethods ms api2)
     ContainsOnlyMethods ms (Verb m _ _ _) = FailOnDissallowedMethod m (IsElemBool m ms)
+    ContainsOnlyMethods ms Raw = ()
+    ContainsOnlyMethods ms EmptyAPI = ()
 
 -- | 'ReflectMethod' lifted to method lists.
 class ReflectMethods (methods :: [StdMethod]) where
