@@ -6,7 +6,7 @@ Example:
 filteringSpecApp
     :: MyObject
     -> FilteringSpecApp
-        DummyFilterBackend
+        DummyFilteringBackend
         [ "id" ?: 'AutoFilter Course
         , "desc" ?: 'AutoFilter Text
         , "isAwesome" ?: 'ManualFilter Bool
@@ -30,6 +30,7 @@ filterObjects filters = filter (matches filters . filteringSpecApp) allObjects
 -}
 module Servant.Util.Dummy.Filtering
     ( matches
+    , filterBySpec
     , filterOn
     , manualFilter
     ) where
@@ -41,19 +42,19 @@ import Servant.Util.Combinators.Filtering.Base
 import Servant.Util.Combinators.Filtering.Filters
 
 -- | Implements filters via Beam query expressions ('QExpr').
-data DummyFilterBackend
+data DummyFilteringBackend
 
-instance FilterBackend DummyFilterBackend where
-    type AutoFilteredValue DummyFilterBackend a = a
-    type MatchPredicate DummyFilterBackend = Bool
+instance FilterBackend DummyFilteringBackend where
+    type AutoFilteredValue DummyFilteringBackend a = a
+    type MatchPredicate DummyFilteringBackend = Bool
 
-instance Eq a => AutoFilterSupport DummyFilterBackend FilterMatching a where
+instance Eq a => AutoFilterSupport DummyFilteringBackend FilterMatching a where
     autoFilterSupport = \case
         FilterMatching v -> (== v)
         FilterNotMatching v -> (/= v)
         FilterItemsIn vs -> (`elem` vs)
 
-instance Ord a => AutoFilterSupport DummyFilterBackend FilterComparing a where
+instance Ord a => AutoFilterSupport DummyFilteringBackend FilterComparing a where
     autoFilterSupport = \case
         FilterGT v -> (> v)
         FilterLT v -> (< v)
@@ -63,10 +64,21 @@ instance Ord a => AutoFilterSupport DummyFilterBackend FilterComparing a where
 -- | Applies a whole filtering specification to a set of response fields.
 -- Resulting value can be put to 'filter' function.
 matches
-    :: ( backend ~ DummyFilterBackend
+    :: ( backend ~ DummyFilteringBackend
        , BackendApplySomeFilter backend params
        )
     => FilteringSpec params
     -> FilteringSpecApp backend params
     -> Bool
 matches = and ... backendApplyFilters
+
+-- | Filters given values by a filtering specification.
+filterBySpec
+    :: ( backend ~ DummyFilteringBackend
+       , BackendApplySomeFilter backend params
+       )
+    => FilteringSpec params
+    -> (a -> FilteringSpecApp backend params)
+    -> [a]
+    -> [a]
+filterBySpec spec mkApp = filter (matches spec . mkApp)

@@ -30,11 +30,10 @@ import Servant.Util.Common
 class FilterBackend backend where
 
     -- | The part of object which we are filtering on,
-    -- is provided by server backend implementor.
+    -- provided by server backend implementor.
     type AutoFilteredValue backend a
 
     -- | A resulting predicate.
-    -- Should have a 'Monoid' instance which forms a predicates conjunction.
     type MatchPredicate backend
 
 -- | Implementation of auto filter we provide.
