@@ -57,7 +57,7 @@ instance SortingBackend DummySortingBackend where
 
     type SortedValueConstraint DummySortingBackend a = (Typeable a, Ord a)
 
-    fieldSort field = SortingApp $ \(SortingItemTagged (SortingItem _name order)) ->
+    backendFieldSort field = SortingApp $ \(SortingItemTagged (SortingItem _name order)) ->
         case order of
             Ascendant  -> SomeOrd field
             Descendant -> SomeOrd (Down field)

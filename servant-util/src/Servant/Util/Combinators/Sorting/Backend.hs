@@ -1,6 +1,7 @@
 -- | Applying sorting specifications.
 module Servant.Util.Combinators.Sorting.Backend
     ( SortingBackend (..)
+    , fieldSort
     , SortingApp (..)
     , SortingSpecApp
 
@@ -30,10 +31,16 @@ class SortingBackend backend where
     type BackendOrdering backend :: *
 
     -- | Implement 'SortingApp' as sorting on the given field.
-    fieldSort
+    backendFieldSort
         :: SortedValueConstraint backend a
         => SortedValue backend a
         -> SortingApp backend ('TyNamedParam name a)
+
+fieldSort
+    :: forall name a backend.
+       (SortingBackend backend, SortedValueConstraint backend a)
+    => SortedValue backend a -> SortingApp backend ('TyNamedParam name a)
+fieldSort = backendFieldSort
 
 -- | A function defining a way to apply the given 'SortingItem' (which is sorting
 -- order on a single parameter).
