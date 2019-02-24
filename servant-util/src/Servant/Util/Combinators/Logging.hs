@@ -21,6 +21,7 @@ import Control.Exception.Safe (handleAny)
 import Control.Monad.Error.Class (catchError, throwError)
 import Data.Default (Default (..))
 import Data.Reflection (Reifies (..), reify)
+import Data.Swagger (Swagger)
 import qualified Data.Text as T
 import qualified Data.Text.Buildable as B
 import qualified Data.Text.Lazy.Builder as B
@@ -28,10 +29,11 @@ import Data.Time.Clock.POSIX (getPOSIXTime)
 import Fmt (blockListF, (+|), (|+), (||+))
 import GHC.IO.Unsafe (unsafePerformIO)
 import GHC.TypeLits (KnownSymbol, symbolVal)
-import Servant.API ((:<|>) (..), (:>), Capture, Description, NoContent, QueryFlag, QueryParam',
+import Servant.API ((:<|>) (..), (:>), Capture, Description, NoContent, QueryFlag, QueryParam', Raw,
                     ReflectMethod (..), ReqBody, Summary, Verb)
 import Servant.Server (Handler (..), HasServer (..), ServantErr (..), Server)
 import qualified Servant.Server.Internal as SI
+import Servant.Swagger.UI (SwaggerUiHtml)
 import System.Console.Pretty (Color (..), Style (..), color, style)
 
 import Servant.Util.Common
@@ -361,6 +363,9 @@ applyLoggingToHandler
 applyLoggingToHandler configP methodP (paramsInfo, handler) = do
     applyServantLogging configP methodP paramsInfo (pretty . ForResponseLog) handler
 
+skipLogging :: (ApiParamsLogInfo, action) -> action
+skipLogging = snd
+
 instance ( HasServer (Verb mt st ct a) ctx
          , Reifies config ServantLogConfig
          , ReflectMethod mt
@@ -371,6 +376,9 @@ instance ( HasServer (Verb mt st ct a) ctx
         inRouteServer @(Verb mt st ct a) route $
         applyLoggingToHandler (Proxy @config) (Proxy @mt)
 
+instance HasLoggingServer config Raw ctx where
+    routeWithLog = inRouteServer @Raw route skipLogging
+
 instance Buildable (ForResponseLog NoContent) where
     build _ = "<no response>"
 
@@ -379,6 +387,12 @@ instance Buildable (ForResponseLog ()) where
 
 instance Buildable (ForResponseLog Integer) where
     build = buildForResponse
+
+instance Buildable (ForResponseLog Swagger) where
+    build _ = "Swagger specification"
+
+instance Buildable (ForResponseLog (SwaggerUiHtml dir api)) where
+    build _ = "Accessed documentation UI"
 
 -- | Apply logging to the given server.
 serverWithLogging
