@@ -70,6 +70,13 @@ instance BuildableAutoFilter FilterLike where
         FilterLike cs f -> build name <> " " <> build f <> " " <> build cs
 
 instance IsAutoFilter FilterLike where
+    autoFilterEnglishOpsNames = M.fromList
+        [ ("like", "LIKE pattern match")
+        , ("ilike", "case-insensitive LIKE pattern match")
+        , ("contains", "contains text")
+        , ("icontains", "case-insensitive 'contains text'")
+        ]
+
     autoFilterParsers _ = M.fromList
         [ ( "like"
           , FilterLike (CaseSensitivity True) <$> parseLikePattern

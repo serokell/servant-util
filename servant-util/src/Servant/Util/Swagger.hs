@@ -1,5 +1,6 @@
 module Servant.Util.Swagger
     ( ParamDescription
+    , DescribedParam
     , paramDescription
 
     , QueryFlagDescription
@@ -33,6 +34,8 @@ makePrisms ''S.Referenced
 -- To circumvent that you can define description in instance of this type family
 -- and later override swagger derivation accordingly.
 type family ParamDescription a :: Symbol
+
+type DescribedParam a = (S.ToParamSchema a, KnownSymbol (ParamDescription a))
 
 -- | Set description according to 'ParamDescription' definition.
 paramDescription

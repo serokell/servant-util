@@ -54,4 +54,3 @@ instance (HasClient m subApi, SomeFilterToReq params) =>
         FilteringSpec params -> Client m subApi
     clientWithRoute mp _ req (FilteringSpec filters) =
         clientWithRoute mp (Proxy @subApi) (foldr someFilterToReq req filters)
--------------------------------------------------------------------------

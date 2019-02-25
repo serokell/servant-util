@@ -1,10 +1,9 @@
 module Test.Servant.Filtering.LikeSpec where
 
+import Test.Hspec (Spec, describe, it)
 import Universum
 
 import Servant.Util.Combinators.Filtering.Filters.Like
-
-import Test.Hspec (Spec, describe, it)
 
 spec :: Spec
 spec = do

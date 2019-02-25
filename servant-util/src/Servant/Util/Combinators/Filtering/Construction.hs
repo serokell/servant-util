@@ -5,7 +5,8 @@
 
 -- | Helpers for defining filters manually.
 module Servant.Util.Combinators.Filtering.Construction
-    ( mkFilteringSpec
+    ( noFilters
+    , mkFilteringSpec
     , ($=)
     , ($~)
     ) where
@@ -13,6 +14,7 @@ module Servant.Util.Combinators.Filtering.Construction
 import Universum hiding (filter)
 
 import Data.Coerce (coerce)
+import Data.Default (Default (..))
 import GHC.OverloadedLabels (IsLabel (..))
 import GHC.TypeLits (ErrorMessage (..), KnownSymbol, TypeError)
 import Servant (If)
@@ -47,6 +49,14 @@ You can freely use 'GHC.Exts.fromList' instead of this function.
 -}
 mkFilteringSpec :: [SomeFilter params] -> FilteringSpec params
 mkFilteringSpec = FilteringSpec
+
+-- | By default 'noFilters' is used.
+instance Default (FilteringSpec params) where
+    def = noFilters
+
+-- | Return all items.
+noFilters :: FilteringSpec params
+noFilters = FilteringSpec []
 
 type family IsSupportedFilter filter a :: Constraint where
     IsSupportedFilter filter a =

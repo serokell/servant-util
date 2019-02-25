@@ -35,3 +35,4 @@ import Servant.Util.Combinators.Filtering.Filters
 import Servant.Util.Combinators.Filtering.Logging ()
 import Servant.Util.Combinators.Filtering.Server ()
 import Servant.Util.Combinators.Filtering.Support
+import Servant.Util.Combinators.Filtering.Swagger ()
