@@ -37,7 +37,7 @@ parseAutoTypeFilteringParam field key val =
                      maybeToRight ("Unclosed bracket in query key '" +| key |+ "'") $
                      T.stripPrefix "[" <=< T.stripSuffix "]" $ remainder
 
-        let op = mop ?: defFilteringCmd
+        let op = mop ?: DefFilteringCmd
         let parsersPerOp = autoFiltersParsers @filters @a
         let allowedOps = M.keys parsersPerOp
 

@@ -7,7 +7,7 @@ module Servant.Util.Combinators.Filtering.Base
     , FilteringParams
     , SupportedFilters
     , FilteringSpec (..)
-    , defFilteringCmd
+    , pattern DefFilteringCmd
 
     , SomeTypeAutoFilter (..)
     , TypeFilter (..)
@@ -19,6 +19,7 @@ module Servant.Util.Combinators.Filtering.Base
     , IsAutoFilter (..)
     , AreAutoFilters (..)
     , FilteringValueParser (..)
+    , OpsDescriptions
     , parseFilteringValueAsIs
     , unsupportedFilteringValue
     , autoFiltersParsers
@@ -71,8 +72,8 @@ data FilteringParams (params :: [TyNamedFilter])
 type family SupportedFilters ty :: [* -> *]
 
 -- | If no filtering command specified, think like if the given one was passed.
-defFilteringCmd :: Text
-defFilteringCmd = "eq"
+pattern DefFilteringCmd :: Text
+pattern DefFilteringCmd = "eq"
 
 -- | Parses text on the right side of "=" sign in query parameters.
 newtype FilteringValueParser a = FilteringValueParser (Text -> Either Text a)
@@ -85,6 +86,10 @@ parseFilteringValueAsIs = FilteringValueParser parseUrlPiece
 unsupportedFilteringValue :: Text -> FilteringValueParser a
 unsupportedFilteringValue errMsg = FilteringValueParser (\_ -> Left errMsg)
 
+-- | For each filtering operation specifies a short plain-english description.
+-- This is not a 'Map' to prevent developer-defined entries order.
+type OpsDescriptions = [(Text, Text)]
+
 -- | How auto filters appear in logging.
 class BuildableAutoFilter (filter :: * -> *) where
     buildAutoFilter
@@ -95,9 +100,9 @@ class (Typeable filter, BuildableAutoFilter filter) =>
       IsAutoFilter (filter :: * -> *) where
 
     -- | For each supported filtering operation specifies a short plain-english
-    -- description
+    -- description.
     autoFilterEnglishOpsNames
-        :: Map Text Text
+        :: OpsDescriptions
 
     -- | For each supported filtering operation specifies parser for a filtering value.
     autoFilterParsers
