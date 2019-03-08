@@ -22,7 +22,7 @@ import Servant.Util.Common
 typeFilterToReq :: ToHttpApiData a => TypeFilter fk a -> (Text, Text)
 typeFilterToReq = \case
     TypeAutoFilter (SomeTypeAutoFilter filter) -> autoFilterEncode filter
-    TypeManualFilter val -> (defFilteringCmd, toQueryParam val)
+    TypeManualFilter val -> (DefFilteringCmd, toQueryParam val)
 
 -- | Apply filter to a client request being built.
 class SomeFilterToReq params where
@@ -42,7 +42,7 @@ instance ( KnownSymbol name
         | symbolValT @name == sfName =
             let filter :: TypeFilter fk a = cast sfFilter ?: error "Failed to cast filter"
                 (op, value) = typeFilterToReq filter
-                keymod = if op == defFilteringCmd then "" else "[" <> op <> "]"
+                keymod = if op == DefFilteringCmd then "" else "[" <> op <> "]"
                 key = sfName <> keymod
             in appendToQueryString key (Just value)
         | otherwise =
@@ -54,4 +54,3 @@ instance (HasClient m subApi, SomeFilterToReq params) =>
         FilteringSpec params -> Client m subApi
     clientWithRoute mp _ req (FilteringSpec filters) =
         clientWithRoute mp (Proxy @subApi) (foldr someFilterToReq req filters)
--------------------------------------------------------------------------

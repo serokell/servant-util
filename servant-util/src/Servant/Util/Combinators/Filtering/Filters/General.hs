@@ -32,8 +32,14 @@ instance BuildableAutoFilter FilterMatching where
         FilterItemsIn v -> build name <> " ∊ " <> listF v
 
 instance IsAutoFilter FilterMatching where
+    autoFilterEnglishOpsNames =
+        [ (DefFilteringCmd, "is equal to, _default operation_")
+        , ("neq", "is not equal to")
+        , ("in", "is one of")
+        ]
+
     autoFilterParsers _ = M.fromList
-        [ ( defFilteringCmd
+        [ ( DefFilteringCmd
           , FilterMatching <$> parseFilteringValueAsIs
           )
         , ( "neq"
@@ -51,7 +57,7 @@ instance IsAutoFilter FilterMatching where
             mapM parseUrlPiece vals
 
     autoFilterEncode = \case
-        FilterMatching v -> (defFilteringCmd, toQueryParam v)
+        FilterMatching v -> (DefFilteringCmd, toQueryParam v)
         FilterNotMatching v -> ("neq", toQueryParam v)
         FilterItemsIn vs -> ("in", "[" <> T.intercalate "," (map toQueryParam vs) <> "]")
 
@@ -72,6 +78,13 @@ instance BuildableAutoFilter FilterComparing where
         FilterLTE v -> build name <> " <= " <> build v
 
 instance IsAutoFilter FilterComparing where
+    autoFilterEnglishOpsNames =
+        [ ("gt", "is greater")
+        , ("lt", "is less")
+        , ("gte", "is greater or equal")
+        , ("lte", "is less or equal")
+        ]
+
     autoFilterParsers _ = M.fromList
         [ ( "gt"
           , FilterGT <$> parseFilteringValueAsIs

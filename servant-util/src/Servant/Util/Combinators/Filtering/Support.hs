@@ -3,6 +3,7 @@ module Servant.Util.Combinators.Filtering.Support
     ( NumericFilterTypes
     , TextFilterTypes
     , DatetimeFilterTypes
+    , AllFilterTypes
     ) where
 
 import Universum
@@ -17,6 +18,7 @@ type NumericFilterTypes = [FilterMatching, FilterComparing]
 type TextFilterTypes = [FilterMatching, FilterComparing, FilterLike]
 type ByteStringFilterTypes = [FilterMatching, FilterComparing]
 type DatetimeFilterTypes = '[FilterComparing]
+type AllFilterTypes = '[FilterMatching, FilterComparing, FilterLike]
 
 type instance SupportedFilters Bool = '[FilterMatching]
 type instance SupportedFilters Int = NumericFilterTypes

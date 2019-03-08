@@ -7,8 +7,7 @@ module Servant.Util.Combinators.Filtering.Base
     , FilteringParams
     , SupportedFilters
     , FilteringSpec (..)
-    , defFilteringCmd
-    , noFilters
+    , pattern DefFilteringCmd
 
     , SomeTypeAutoFilter (..)
     , TypeFilter (..)
@@ -20,6 +19,7 @@ module Servant.Util.Combinators.Filtering.Base
     , IsAutoFilter (..)
     , AreAutoFilters (..)
     , FilteringValueParser (..)
+    , OpsDescriptions
     , parseFilteringValueAsIs
     , unsupportedFilteringValue
     , autoFiltersParsers
@@ -37,7 +37,6 @@ import Fmt (Buildable (..),  Builder,)
 import Data.Kind (type (*))
 import Servant (FromHttpApiData(..), ToHttpApiData (..))
 import GHC.Exts (IsList)
-import Data.Default (Default (..))
 
 import Servant.Util.Common
 
@@ -73,8 +72,8 @@ data FilteringParams (params :: [TyNamedFilter])
 type family SupportedFilters ty :: [* -> *]
 
 -- | If no filtering command specified, think like if the given one was passed.
-defFilteringCmd :: Text
-defFilteringCmd = "eq"
+pattern DefFilteringCmd :: Text
+pattern DefFilteringCmd = "eq"
 
 -- | Parses text on the right side of "=" sign in query parameters.
 newtype FilteringValueParser a = FilteringValueParser (Text -> Either Text a)
@@ -87,6 +86,11 @@ parseFilteringValueAsIs = FilteringValueParser parseUrlPiece
 unsupportedFilteringValue :: Text -> FilteringValueParser a
 unsupportedFilteringValue errMsg = FilteringValueParser (\_ -> Left errMsg)
 
+-- | For each filtering operation specifies a short plain-english description.
+-- This is not a 'Map' to prevent developer-defined entries order.
+type OpsDescriptions = [(Text, Text)]
+
+-- | How auto filters appear in logging.
 class BuildableAutoFilter (filter :: * -> *) where
     buildAutoFilter
         :: Buildable a => Text -> filter a -> Builder
@@ -94,10 +98,16 @@ class BuildableAutoFilter (filter :: * -> *) where
 -- | Application of a filter type to Servant API.
 class (Typeable filter, BuildableAutoFilter filter) =>
       IsAutoFilter (filter :: * -> *) where
+
+    -- | For each supported filtering operation specifies a short plain-english
+    -- description.
+    autoFilterEnglishOpsNames
+        :: OpsDescriptions
+
     -- | For each supported filtering operation specifies parser for a filtering value.
     autoFilterParsers
         :: FromHttpApiData a
-        => Proxy filter -> Map Text $ FilteringValueParser (filter a)
+        => Proxy filter -> Map Text (FilteringValueParser (filter a))
 
     -- | Encode a filter to query parameter value.
     autoFilterEncode
@@ -109,7 +119,6 @@ class (Typeable filter, BuildableAutoFilter filter) =>
     default mapAutoFilterValue
         :: Functor filter => (a -> b) -> filter a -> filter b
     mapAutoFilterValue = fmap
-
 
 -- | Multi-version of 'IsFilter'.
 class AreAutoFilters (filters :: [* -> *]) where
@@ -181,14 +190,6 @@ extendSomeFilter (SomeFilter f n) = SomeFilter f n
 -- Invariant: each filter correspond to some type mentioned in @params@.
 newtype FilteringSpec (params :: [TyNamedFilter]) = FilteringSpec [SomeFilter params]
     deriving (IsList)
-
--- | By default 'noFilters' is used.
-instance Default (FilteringSpec params) where
-    def = noFilters
-
--- | Return all items.
-noFilters :: FilteringSpec params
-noFilters = FilteringSpec []
 
 -- | For a given return type of an endpoint get corresponding filtering params.
 -- This mapping is sensible, since we usually allow to filter only on fields appearing in
