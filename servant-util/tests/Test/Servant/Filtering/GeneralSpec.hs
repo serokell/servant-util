@@ -3,6 +3,7 @@ module Test.Servant.Filtering.GeneralSpec where
 import Universum
 
 import qualified Data.Map as M
+import qualified Data.Set as S
 import Test.Hspec (Spec, it)
 import Test.QuickCheck (property)
 
@@ -20,7 +21,7 @@ instance FilterOpsMatch '[] where
 instance (IsAutoFilter filter, FilterOpsMatch filters) =>
          FilterOpsMatch (filter ': filters) where
     filterOpsMatch = do
-        let opsEng = M.keysSet $ autoFilterEnglishOpsNames @filter
+        let opsEng = S.fromList . map fst $ autoFilterEnglishOpsNames @filter
         let opsP = M.keysSet $ autoFilterParsers @filter @() Proxy
         unless (opsEng == opsP) $
             Left $ "autoFilterParsers and autoFilterEnglishOpsNames \
