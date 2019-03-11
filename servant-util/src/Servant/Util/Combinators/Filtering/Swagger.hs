@@ -42,7 +42,8 @@ autoFilterDesc ops = fullDesc
     opsDesc
         | [(DefFilteringCmd, _)] <- ops = []
         | otherwise =
-            "You can specify a custom filtering operation in `param[op]=value` format." :
+            "You can specify a custom filtering operation in `param[op]=value` \
+            \or `param_op=value` format." :
             "Allowed operations:" :
             (ops <&> \(op, engDesc) -> "* `" <> op <> "` (" <> engDesc <> ")")
 

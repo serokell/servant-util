@@ -11,7 +11,6 @@ import Data.Kind (type (*))
 import qualified Data.Map as M
 import qualified Data.Text as T
 import Fmt (Buildable (..))
-import Fmt ((+|), (|+))
 import GHC.TypeLits (KnownSymbol)
 import Network.HTTP.Types.URI (QueryText, parseQueryText)
 import Network.Wai.Internal (rawQueryString)
@@ -21,6 +20,19 @@ import Servant.Server.Internal (addParameterCheck, delayedFailFatal, withRequest
 import Servant.Util.Combinators.Filtering.Base
 import Servant.Util.Common
 
+-- | Try to parse query key assuming that the specified field to filter on
+-- should match the given name.
+-- If specified filter does not match the given one, 'Nothing' is returned.
+-- Otherwise operation name is extracted and returned.
+parseQueryKey :: Text -> Text -> Maybe Text
+parseQueryKey field key = do
+    remainder <- T.stripPrefix field key
+    asum
+        [ guard (null remainder) $> DefFilteringCmd
+        , T.stripPrefix "[" <=< T.stripSuffix "]" $ remainder
+        , T.stripPrefix "_" remainder
+        ]
+
 -- | Try to parse given query parameter as filter applicable to type @a@.
 -- If the parameter is not recognized as filtering one, 'Nothing' is returned.
 -- Otherwise it is parsed and any potential errors are reported as-is.
@@ -28,19 +40,12 @@ parseAutoTypeFilteringParam
     :: forall a (filters :: [* -> *]).
        (filters ~ SupportedFilters a, AreAutoFilters filters, FromHttpApiData a)
     => Text -> Text -> Text -> Maybe (Either Text $ SomeTypeAutoFilter a)
-parseAutoTypeFilteringParam field key val =
-    let (field', remainder) = T.break (== '[') key
-    in guard (field == field') $> do
-        mop <- if null remainder
-                then pure Nothing
-                else fmap Just $
-                     maybeToRight ("Unclosed bracket in query key '" +| key |+ "'") $
-                     T.stripPrefix "[" <=< T.stripSuffix "]" $ remainder
+parseAutoTypeFilteringParam field key val = do
+    op <- parseQueryKey field key
+    let parsersPerOp = autoFiltersParsers @filters @a
+    let allowedOps = M.keys parsersPerOp
 
-        let op = mop ?: DefFilteringCmd
-        let parsersPerOp = autoFiltersParsers @filters @a
-        let allowedOps = M.keys parsersPerOp
-
+    pure $ do
         FilteringValueParser parser <- case M.lookup op parsersPerOp of
             Nothing -> Left $ "Unsupported filtering command " <> show op <> ". \
                               \Available commands: " <>
