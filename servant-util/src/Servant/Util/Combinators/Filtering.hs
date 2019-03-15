@@ -22,10 +22,7 @@ module Servant.Util.Combinators.Filtering
     , DatetimeFilterTypes
 
       -- * Manual construction
-    , mkFilteringSpec
-    , noFilters
-    , ($=)
-    , ($~)
+    , module Servant.Util.Combinators.Filtering.Construction
     ) where
 
 import Servant.Util.Combinators.Filtering.Base

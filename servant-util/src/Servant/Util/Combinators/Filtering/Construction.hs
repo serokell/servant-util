@@ -7,15 +7,16 @@
 module Servant.Util.Combinators.Filtering.Construction
     ( noFilters
     , mkFilteringSpec
-    , ($=)
-    , ($~)
+    , (?/)
+    , (?/=)
+    , (?/>)
+    , (?/~)
     ) where
 
 import Universum hiding (filter)
 
 import Data.Coerce (coerce)
 import Data.Default (Default (..))
-import GHC.OverloadedLabels (IsLabel (..))
 import GHC.TypeLits (ErrorMessage (..), KnownSymbol, TypeError)
 import Servant (If)
 
@@ -105,29 +106,44 @@ instance MkSomeFilter name filter origParams params =>
          MkSomeFilter name filter origParams (param ': params) where
     mkSomeFilter filter = coerce $ mkSomeFilter @name @filter @origParams @params filter
 
--- | Filter can be raised to 'SomeFilter' which is part of 'FilteringSpec'.
-instance MkSomeFilter name filter params params =>
-         IsLabel name (filter -> SomeFilter params) where
-    fromLabel = mkSomeFilter @name @_ @params
+-- | "Filter by" operation.
+-- Wraps a filter corresponding to the given name into 'SomeFilter' which can later be
+-- passed to 'mkSomeFilter'.
+(?/)
+    :: forall name params filter.
+       MkSomeFilter name filter params params
+    => NameLabel name -> filter -> SomeFilter params
+(?/) _ = mkSomeFilter @name @_ @params
+infixr 0 ?/
 
--- | Hint to provide a filter itself.
-instance TypeError ('Text "Filter is missing") =>
-         IsLabel name (SomeFilter params) where
-    fromLabel = error "impossible"
+-- | "Filter by matching" operation.
+(?/=)
+    :: forall name params filter.
+       MkSomeFilter name (FilterMatching filter) params params
+    => NameLabel name -> filter -> SomeFilter params
+(?/=) l = (l ?/) . FilterMatching
+infixr 0 ?/=
 
--- | Construct a matching filter.
-($=) :: (FilterMatching a -> SomeFilter params) -> a -> SomeFilter params
-($=) f = f . FilterMatching
-infixr 0 $=
+-- | "Filter by 'is greater'" operation.
+(?/>)
+    :: forall name params filter.
+       MkSomeFilter name (FilterComparing filter) params params
+    => NameLabel name -> filter -> SomeFilter params
+(?/>) l = (l ?/) . FilterGT
+infixr 0 ?/>
 
--- | Construct a filter from a value with the same representation as expected one.
+-- | Construct a (manual) filter from a value with the same representation as expected one.
 -- Helpful when newtypes are heavely used in API parameters.
-($~) :: Coercible a b => (b -> SomeFilter params) -> a -> SomeFilter params
-($~) f = f . coerce
+(?/~)
+    :: forall name filter' params filter.
+       (MkSomeFilter name filter' params params, Coercible filter filter')
+    => NameLabel name -> filter -> SomeFilter params
+(?/~) l = (l ?/) . coerce @_ @filter'
 
 _sample :: FilteringSpec ["id" ?: 'AutoFilter Int, "desc" ?: 'ManualFilter Text]
 _sample =
-    [ #id (FilterMatching 5)
-    , #desc "Kek"
-    , #id $ FilterGT 3
+    [ #id ?/ FilterMatching 5
+    , #id ?/= 5
+    , #desc ?/ "Kek"
+    , #id ?/ FilterGT 3
     ]
