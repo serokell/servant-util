@@ -5,10 +5,15 @@ module Servant.Util.Internal.Util
     , IsNotZero
     , KnownPositive
     , positiveVal
+    , prettyL
+    , pretty
     ) where
 
 import Universum
 
+import Data.Text.Lazy (toStrict)
+import Data.Text.Lazy.Builder (toLazyText)
+import Fmt (Buildable (..))
 import GHC.TypeLits (ErrorMessage (..), KnownNat, Nat, TypeError)
 import Servant (FromHttpApiData (..), ToHttpApiData (..))
 
@@ -34,3 +39,9 @@ instance (FromHttpApiData a, Show a, Ord a, Num a) => FromHttpApiData (Positive 
 
 instance ToHttpApiData a => ToHttpApiData (Positive a) where
     toUrlPiece = toUrlPiece @a . unPositive
+
+prettyL :: Buildable a => a -> LText
+prettyL = toLazyText . build
+
+pretty :: Buildable a => a -> Text
+pretty = toStrict . prettyL

@@ -16,9 +16,13 @@ instance HasClient m subApi =>
          HasClient m (SortingParams params :> subApi) where
     type Client m (SortingParams params :> subApi) =
         SortingSpec params -> Client m subApi
+
     clientWithRoute mp _ req (SortingSpec sorting) =
         clientWithRoute mp (Proxy @(SortParamsExpanded params subApi)) req
             (Just $ Tagged sorting)
+
+    hoistClientMonad mp _ nat clientOld spec =
+        hoistClientMonad mp (Proxy @subApi) nat $ clientOld spec
 
 instance ToHttpApiData (TaggedSortingItemsList allowed) where
     toUrlPiece (Tagged sorting) =

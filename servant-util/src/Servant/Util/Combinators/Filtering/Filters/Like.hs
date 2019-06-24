@@ -11,7 +11,7 @@ import Universum
 
 import qualified Data.Map as M
 import qualified Data.Text.Lazy as LT
-import Fmt (build, (+|), (|+))
+import Fmt (Buildable, build, (+|), (|+))
 import Servant (ToHttpApiData (..), FromHttpApiData (..))
 import System.Console.Pretty (Color (..), Style (..), color, style)
 

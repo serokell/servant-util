@@ -37,11 +37,9 @@ module Servant.Util.Beam.Postgres.Filtering
 
 import Universum
 
-import Database.Beam.Backend.SQL (HasSqlValueSyntax, IsSql92ExpressionSyntax, IsSql92SelectSyntax,
-                                  IsSqlExpressionSyntaxStringType, Sql92ExpressionValueSyntax,
-                                  Sql92SelectSelectTableSyntax, Sql92SelectTableExpressionSyntax)
-import Database.Beam.Query (HasSqlEqualityCheck, Q, guard_, in_, like_, val_, (&&.), (/=.), (<.),
-                            (<=.), (==.), (>.), (>=.))
+import Database.Beam.Backend.SQL (BeamSqlBackend, BeamSqlBackendIsString, BeamSqlBackendCanSerialize)
+import Database.Beam.Query (HasSqlEqualityCheck, HasSqlQuantifiedEqualityCheck, Q, SqlValable(..),
+                            guard_, in_, like_, (&&.), (/=.), (<.), (<=.), (==.), (>.), (>=.))
 import Database.Beam.Query.Internal (QExpr)
 
 import Servant.Util.Combinators.Filtering.Base
@@ -59,7 +57,7 @@ instance FilterBackend (QExprFilterBackend syntax s) where
     type MatchPredicate (QExprFilterBackend syntax s) =
         QExpr syntax s Bool
 
-instance ( HasSqlValueSyntax (Sql92ExpressionValueSyntax syntax) a
+instance ( SqlValable (QExpr syntax s a)
          , HasSqlEqualityCheck syntax a
          ) =>
          AutoFilterSupport (QExprFilterBackend syntax s) FilterMatching a where
@@ -68,8 +66,8 @@ instance ( HasSqlValueSyntax (Sql92ExpressionValueSyntax syntax) a
         FilterNotMatching v -> (/=. val_ v)
         FilterItemsIn vs -> (`in_` map val_ vs)
 
-instance ( HasSqlValueSyntax (Sql92ExpressionValueSyntax syntax) a
-         , IsSql92ExpressionSyntax syntax
+instance ( SqlValable (QExpr syntax s a)
+         , HasSqlQuantifiedEqualityCheck syntax a
          ) =>
          AutoFilterSupport (QExprFilterBackend syntax s) FilterComparing a where
     autoFilterSupport = \case
@@ -99,10 +97,10 @@ likeToSqlPattern = go . toString . unLikePattern
         c : r -> c : go r
         [] -> []
 
-instance ( IsSql92ExpressionSyntax syntax
-         , IsString text
-         , IsSqlExpressionSyntaxStringType syntax text
-         , HasSqlValueSyntax (Sql92ExpressionValueSyntax syntax) text
+instance ( IsString text
+         , BeamSqlBackend syntax
+         , BeamSqlBackendIsString syntax text
+         , BeamSqlBackendCanSerialize syntax text
          ) =>
          AutoFilterSupport (QExprFilterBackend syntax s) FilterLike text where
     autoFilterSupport = \case
@@ -115,8 +113,8 @@ instance ( IsSql92ExpressionSyntax syntax
 -- Resulting value can be put to 'guard_' or 'filter_' function.
 matches_
     :: ( backend ~ QExprFilterBackend syntax s
+       , BeamSqlBackend syntax
        , BackendApplySomeFilter backend params
-       , IsSql92ExpressionSyntax syntax
        )
     => FilteringSpec params
     -> FilteringSpecApp backend params
@@ -129,18 +127,17 @@ data QFilterBackend syntax (db :: (* -> *) -> *) s
 instance FilterBackend (QFilterBackend syntax db s) where
 
     type AutoFilteredValue (QFilterBackend syntax db s) a =
-        QExpr (Sql92SelectTableExpressionSyntax (Sql92SelectSelectTableSyntax syntax)) s a
+        QExpr syntax s a
 
     type MatchPredicate (QFilterBackend syntax db s) =
         Q syntax db s ()
 
-instance ( select ~ Sql92SelectTableExpressionSyntax (Sql92SelectSelectTableSyntax syntax)
-         , IsSql92SelectSyntax syntax
-         , AutoFilterSupport (QExprFilterBackend select s) filter a
+instance ( BeamSqlBackend syntax
+         , AutoFilterSupport (QExprFilterBackend syntax s) filter a
          ) =>
          AutoFilterSupport (QFilterBackend syntax db s) filter a where
     autoFilterSupport =
-        guard_ ... autoFilterSupport @(QExprFilterBackend select s)
+        guard_ ... autoFilterSupport @(QExprFilterBackend syntax s)
 
 -- | Applies a whole filtering specification to a set of response fields.
 -- Resulting value can be monadically binded with the remaining query (just like 'guard_').

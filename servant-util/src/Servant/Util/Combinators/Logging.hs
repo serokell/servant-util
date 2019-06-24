@@ -15,7 +15,7 @@ module Servant.Util.Combinators.Logging
     , serverWithLogging
     ) where
 
-import Universum hiding (log)
+import Universum
 
 import Control.Exception.Safe (handleAny)
 import Control.Monad.Error.Class (catchError, throwError)
@@ -23,20 +23,20 @@ import Data.Default (Default (..))
 import Data.Reflection (Reifies (..), reify)
 import Data.Swagger (Swagger)
 import qualified Data.Text as T
-import qualified Data.Text.Buildable as B
 import qualified Data.Text.Lazy.Builder as B
 import Data.Time.Clock.POSIX (getPOSIXTime)
-import Fmt (blockListF, (+|), (|+), (||+))
+import Fmt (Buildable (..), blockListF, (+|), (|+), (||+))
 import GHC.IO.Unsafe (unsafePerformIO)
 import GHC.TypeLits (KnownSymbol, symbolVal)
 import Servant.API ((:<|>) (..), (:>), Capture, Description, NoContent, QueryFlag, QueryParam', Raw,
-                    ReflectMethod (..), ReqBody, Summary, Verb)
+                    ReflectMethod (..), ReqBody, StdMethod, Summary, Verb)
 import Servant.Server (Handler (..), HasServer (..), ServantErr (..), Server)
 import qualified Servant.Server.Internal as SI
-import Servant.Swagger.UI (SwaggerUiHtml)
+import Servant.Swagger.UI (SwaggerSchemaUI')
 import System.Console.Pretty (Color (..), Style (..), color, style)
 
 import Servant.Util.Common
+import Servant.Util.Internal.Util (pretty)
 
 -- | Enables logging for server which serves given api.
 --
@@ -112,7 +112,7 @@ buildListForResponse truncList (ForResponseLog l) =
     in  startNf +| blockListF (map ForResponseLog lt) |+ mMore
 
 buildForResponse :: Buildable a => ForResponseLog a -> B.Builder
-buildForResponse = B.build . unForResponseLog
+buildForResponse = build . unForResponseLog
 
 instance ( HasServer (LoggingApiRec config api) ctx
          , HasServer api ctx
@@ -265,7 +265,7 @@ nextRequestId = atomically $ do
 -- | Modify an action so that it performs all the required logging.
 applyServantLogging
     :: ( Reifies config ServantLogConfig
-       , ReflectMethod (method :: k)
+       , ReflectMethod (method :: StdMethod)
        )
     => Proxy config
     -> Proxy method
@@ -357,9 +357,9 @@ applyLoggingToHandler
     :: forall config method a.
        ( Buildable (ForResponseLog a)
        , Reifies config ServantLogConfig
-       , ReflectMethod method
+       , ReflectMethod (method :: StdMethod)
        )
-    => Proxy config -> Proxy (method :: k) -> (ApiParamsLogInfo, Handler a) -> Handler a
+    => Proxy config -> Proxy method -> (ApiParamsLogInfo, Handler a) -> Handler a
 applyLoggingToHandler configP methodP (paramsInfo, handler) = do
     applyServantLogging configP methodP paramsInfo (pretty . ForResponseLog) handler
 
@@ -371,7 +371,7 @@ instance ( HasServer (Verb mt st ct a) ctx
          , ReflectMethod mt
          , Buildable (ForResponseLog a)
          ) =>
-         HasLoggingServer config (Verb (mt :: k) (st :: Nat) (ct :: [*]) a) ctx where
+         HasLoggingServer config (Verb (mt :: StdMethod) (st :: Nat) (ct :: [*]) a) ctx where
     routeWithLog =
         inRouteServer @(Verb mt st ct a) route $
         applyLoggingToHandler (Proxy @config) (Proxy @mt)
@@ -391,7 +391,7 @@ instance Buildable (ForResponseLog Integer) where
 instance Buildable (ForResponseLog Swagger) where
     build _ = "Swagger specification"
 
-instance Buildable (ForResponseLog (SwaggerUiHtml dir api)) where
+instance Buildable (ForResponseLog (SwaggerSchemaUI' dir api)) where
     build _ = "Accessed documentation UI"
 
 -- | Apply logging to the given server.

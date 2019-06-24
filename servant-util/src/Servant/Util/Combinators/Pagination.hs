@@ -104,6 +104,8 @@ instance HasClient m subApi =>
         clientWithRoute mp (Proxy @(PaginationParamsExpanded subApi)) req
             (guard (psOffset > 0) $> psOffset)
             psLimit
+    hoistClientMonad mp _ nat clientOld spec =
+        hoistClientMonad mp (Proxy @subApi) nat $ clientOld spec
 
 instance HasSwagger api => HasSwagger (PaginationParams :> api) where
     toSwagger _ = toSwagger (Proxy @api)

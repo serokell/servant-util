@@ -8,8 +8,7 @@ module Servant.Util.Beam.Postgres.Sorting
 import Universum
 
 import Data.Coerce (coerce)
-import Database.Beam.Backend.SQL.SQL92 (IsSql92OrderingSyntax, Sql92OrderingExpressionSyntax,
-                                        Sql92SelectExpressionSyntax, Sql92SelectOrderingSyntax)
+import Database.Beam.Backend.SQL (BeamSqlBackend)
 import Database.Beam.Query (SqlOrderable, asc_, desc_, orderBy_)
 import Database.Beam.Query.Internal (Projectible, Q, QExpr, QNested, QOrd, ThreadRewritable,
                                      WithRewrittenThread)
@@ -20,11 +19,11 @@ import Servant.Util.Combinators.Sorting.Base
 -- | Implements sorting for beam-postgres package.
 data BeamSortingBackend syntax s
 
-instance IsSql92OrderingSyntax syntax =>
+instance BeamSqlBackend syntax =>
          SortingBackend (BeamSortingBackend syntax s) where
 
     type SortedValue (BeamSortingBackend syntax s) a =
-        QExpr (Sql92OrderingExpressionSyntax syntax) s a
+        QExpr syntax s a
 
     type BackendOrdering (BeamSortingBackend syntax s) =
         QOrd syntax s Void
@@ -45,10 +44,10 @@ instance IsSql92OrderingSyntax syntax =>
 
 -- | Applies 'orderBy_' according to the given sorting specification.
 sortBy_
-    :: ( backend ~ BeamSortingBackend syntax0 s0
+    :: ( backend ~ BeamSortingBackend syntax s
        , ApplyToSortItem backend params
-       , Projectible (Sql92SelectExpressionSyntax syntax) a
-       , SqlOrderable (Sql92SelectOrderingSyntax syntax) (BackendOrdering backend)
+       , Projectible syntax a
+       , SqlOrderable syntax (BackendOrdering backend)
        , ThreadRewritable (QNested s) a
        )
     => SortingSpec params

@@ -5,20 +5,23 @@ module Servant.Util.Combinators.Filtering.Server
     ( AreFilteringParams
     ) where
 
-import Universum
+import           Universum
 
-import Data.Kind (type (*))
-import qualified Data.Map as M
-import qualified Data.Text as T
-import Fmt (Buildable (..))
-import GHC.TypeLits (KnownSymbol)
-import Network.HTTP.Types.URI (QueryText, parseQueryText)
-import Network.Wai.Internal (rawQueryString)
-import Servant ((:>), FromHttpApiData (..), HasServer (..), ServantErr (..), err400)
-import Servant.Server.Internal (addParameterCheck, delayedFailFatal, withRequest)
+import           Data.Kind                               (Type)
+import qualified Data.Map                                as M
+import qualified Data.Text                               as T
+import           Fmt                                     (Buildable (..))
+import           GHC.TypeLits                            (KnownSymbol)
+import           Network.HTTP.Types.URI                  (QueryText, parseQueryText)
+import           Network.Wai.Internal                    (rawQueryString)
+import           Servant                                 ((:>), FromHttpApiData (..),
+                                                          HasServer (..), ServantErr (..),
+                                                          err400)
+import           Servant.Server.Internal                 (addParameterCheck,
+                                                          delayedFailFatal, withRequest)
 
-import Servant.Util.Combinators.Filtering.Base
-import Servant.Util.Common
+import           Servant.Util.Combinators.Filtering.Base
+import           Servant.Util.Common
 
 -- | Try to parse query key assuming that the specified field to filter on
 -- should match the given name.
@@ -37,7 +40,7 @@ parseQueryKey field key = do
 -- If the parameter is not recognized as filtering one, 'Nothing' is returned.
 -- Otherwise it is parsed and any potential errors are reported as-is.
 parseAutoTypeFilteringParam
-    :: forall a (filters :: [* -> *]).
+    :: forall a (filters :: [Type -> Type]).
        (filters ~ SupportedFilters a, AreAutoFilters filters, FromHttpApiData a)
     => Text -> Text -> Text -> Maybe (Either Text $ SomeTypeAutoFilter a)
 parseAutoTypeFilteringParam field key val = do

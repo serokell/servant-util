@@ -14,7 +14,7 @@ import Servant.Swagger (HasSwagger (..))
 import Servant ((:>), HasServer (..))
 import Servant.Client (HasClient (..))
 import GHC.TypeLits (Symbol, KnownSymbol)
-import Data.Kind (type (*))
+import Data.Kind (Type)
 import qualified Data.Swagger as S
 import Data.Swagger.Declare (runDeclare)
 
@@ -25,7 +25,7 @@ import Servant.Util.Common
 -- | Type-level information about an error response.
 data ErrorDesc = ErrorDesc
     { erCode :: Nat
-    , erException :: *
+    , erException :: Type
     , erDesc :: Symbol
     }
 
@@ -81,6 +81,7 @@ instance HasServer subApi ctx => HasServer (ErrorResponses errors :> subApi) ctx
 instance HasClient m subApi => HasClient m (ErrorResponses errors :> subApi) where
     type Client m (ErrorResponses errors :> subApi) = Client m subApi
     clientWithRoute pm _ = clientWithRoute pm (Proxy @subApi)
+    hoistClientMonad pm _ = hoistClientMonad pm (Proxy @subApi)
 
 instance HasLoggingServer config subApi ctx =>
          HasLoggingServer config (ErrorResponses errors :> subApi) ctx where

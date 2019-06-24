@@ -17,14 +17,14 @@ module Servant.Util.Combinators.Filtering.Backend
     , manualFilter
     ) where
 
-import Universum
+import           Universum
 
-import Data.Kind (type (*))
-import Data.Typeable (gcast1)
-import GHC.TypeLits (KnownSymbol)
+import           Data.Kind                               (Type)
+import           Data.Typeable                           (gcast1)
+import           GHC.TypeLits                            (KnownSymbol)
 
-import Servant.Util.Combinators.Filtering.Base
-import Servant.Util.Common
+import           Servant.Util.Combinators.Filtering.Base
+import           Servant.Util.Common
 
 -- | Implementation of filtering backend.
 class FilterBackend backend where
@@ -67,13 +67,13 @@ type FilteringSpecApp backend params =
 
 -- | Force a type family to be defined.
 -- Primarily for prettier error messages.
-type family AreFiltersDefined (a :: [* -> *]) :: Constraint where
+type family AreFiltersDefined (a :: [Type -> Type]) :: Constraint where
     AreFiltersDefined '[] = Show (Int -> Int)
     AreFiltersDefined a = ()
 
 -- | Lookup among filters supported for this type and prepare
 -- an appropriate one for (deferred) application.
-class TypeAutoFiltersSupport' backend (filters :: [* -> *]) a where
+class TypeAutoFiltersSupport' backend (filters :: [Type -> Type]) a where
     typeAutoFiltersSupport' :: SomeTypeAutoFilter a -> Maybe (AutoFilterImpl backend a)
 
 instance TypeAutoFiltersSupport' backend '[] a where
@@ -108,7 +108,7 @@ typeAutoFiltersSupport filtr =
     ?: error "impossible, invariants of SomeTypeFilter are violated"
 
 -- | Apply a filter for a specific type, evaluate whether a value matches or not.
-class BackendApplyTypeFilter backend (fk :: * -> FilterKind *) a where
+class BackendApplyTypeFilter backend (fk :: Type -> FilterKind Type) a where
     backendApplyTypeFilter
         :: FilteringApp backend ('TyNamedParam name (fk a))
         -> TypeFilter fk a

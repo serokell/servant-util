@@ -29,6 +29,7 @@ instance HasServer subApi ctx => HasServer (Tag name :> subApi) ctx where
 instance HasClient m subApi => HasClient m (Tag name :> subApi) where
     type Client m (Tag name :> subApi) = Client m subApi
     clientWithRoute pm _ = clientWithRoute pm (Proxy @subApi)
+    hoistClientMonad pm _ = hoistClientMonad pm (Proxy @subApi)
 
 instance HasLoggingServer config subApi ctx =>
          HasLoggingServer config (Tag name :> subApi) ctx where
@@ -69,6 +70,7 @@ instance HasServer subApi ctx => HasServer (TagDescriptions ver mapping :> subAp
 instance HasClient m subApi => HasClient m (TagDescriptions ver mapping :> subApi) where
     type Client m (TagDescriptions ver mapping :> subApi) = Client m subApi
     clientWithRoute pm _ = clientWithRoute pm (Proxy @subApi)
+    hoistClientMonad pm _ = hoistClientMonad pm (Proxy @subApi)
 
 instance HasLoggingServer config subApi ctx =>
          HasLoggingServer config (TagDescriptions ver mapping :> subApi) ctx where

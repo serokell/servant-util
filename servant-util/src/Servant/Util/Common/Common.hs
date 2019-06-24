@@ -18,6 +18,8 @@ import Servant.API ((:>), Capture, QueryFlag, QueryParam', ReqBody)
 import Servant.Server (Handler (..), HasServer (..), Server)
 import qualified Servant.Server.Internal as SI
 
+import Servant.Util.Internal.Util (pretty)
+
 type family ApplicationLS x where
     ApplicationLS (a b) = a
 

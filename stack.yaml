@@ -1,13 +1,16 @@
-resolver: lts-11.17
+resolver: lts-12.26
 
 packages:
 - servant-util
 - servant-util-beam-pg
 
 extra-deps:
-- beam-postgres-0.3.2.2
+- beam-core-0.8.0.0
+- beam-postgres-0.4.0.0
+- beam-migrate-0.4.0.1
 - pretty-terminal-0.1.0.0
-- universum-1.1.0
+- fmt-0.6.1.1
+- text-format-0.3.2
 
 nix:
   packages: [zlib, postgresql]
