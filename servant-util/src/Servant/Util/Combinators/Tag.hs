@@ -41,7 +41,7 @@ instance (HasSwagger subApi, KnownSymbol name) =>
       where
         name = symbolValT @name
 
--- | Whether to enable some type-level checks for 'Tag's and 'TagsVerification'
+-- | Whether to enable some type-level checks for 'Tag's and 'TagsDescription's
 -- correspondence.
 --
 -- Note that with the current implementation of 'S.Swagger' datatype your tags
