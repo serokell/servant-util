@@ -8,7 +8,7 @@ import Data.Typeable (cast)
 import GHC.TypeLits (KnownSymbol)
 import Servant ((:>), ToHttpApiData (..), toQueryParam)
 import Servant.Client (HasClient (..))
-import Servant.Client.Core.Internal.Request (Request, appendToQueryString)
+import Servant.Client.Core.Request (Request, appendToQueryString)
 
 import Servant.Util.Combinators.Filtering.Base
 import Servant.Util.Combinators.Filtering.Support ()
@@ -54,3 +54,4 @@ instance (HasClient m subApi, SomeFilterToReq params) =>
         FilteringSpec params -> Client m subApi
     clientWithRoute mp _ req (FilteringSpec filters) =
         clientWithRoute mp (Proxy @subApi) (foldr someFilterToReq req filters)
+    hoistClientMonad pm _ hst subCli = hoistClientMonad pm (Proxy @subApi) hst . subCli

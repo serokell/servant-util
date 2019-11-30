@@ -105,6 +105,8 @@ instance HasClient m subApi =>
             (guard (psOffset > 0) $> psOffset)
             psLimit
 
+    hoistClientMonad pm _ hst subCli = hoistClientMonad pm (Proxy @subApi) hst . subCli
+
 instance HasSwagger api => HasSwagger (PaginationParams :> api) where
     toSwagger _ = toSwagger (Proxy @api)
         & S.allOperations . S.parameters <>~ [S.Inline offsetParam, S.Inline limitParam]
@@ -121,7 +123,7 @@ instance HasSwagger api => HasSwagger (PaginationParams :> api) where
                 & S.paramSchema .~ offsetParamSchema
                 )
         offsetParamSchema = mempty
-            & S.type_ .~ S.SwaggerInteger
+            & S.type_ ?~ S.SwaggerInteger
             & S.format ?~ "int32"
 
         limitParam = mempty
@@ -133,5 +135,5 @@ instance HasSwagger api => HasSwagger (PaginationParams :> api) where
                 & S.paramSchema .~ limitParamSchema
                 )
         limitParamSchema = mempty
-            & S.type_ .~ S.SwaggerInteger
+            & S.type_ ?~ S.SwaggerInteger
             & S.format ?~ "int32"

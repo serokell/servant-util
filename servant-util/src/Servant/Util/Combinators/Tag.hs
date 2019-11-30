@@ -7,7 +7,7 @@ module Servant.Util.Combinators.Tag
 import Universum
 
 import Control.Lens (at, (?~))
-import qualified Data.Set as S
+import qualified Data.HashSet.InsOrd as HS
 import qualified Data.Swagger as S
 import GHC.TypeLits (ErrorMessage (..), KnownSymbol, Symbol, TypeError)
 import Servant ((:<|>), (:>), HasServer (..), StdMethod, Verb)
@@ -29,10 +29,11 @@ instance HasServer subApi ctx => HasServer (Tag name :> subApi) ctx where
 instance HasClient m subApi => HasClient m (Tag name :> subApi) where
     type Client m (Tag name :> subApi) = Client m subApi
     clientWithRoute pm _ = clientWithRoute pm (Proxy @subApi)
+    hoistClientMonad pm _ hst = hoistClientMonad pm (Proxy @subApi) hst
 
 instance HasLoggingServer config subApi ctx =>
          HasLoggingServer config (Tag name :> subApi) ctx where
-    routeWithLog = inRouteServer @(Tag name :> LoggingApiRec config subApi) route identity
+    routeWithLog = inRouteServer @(Tag name :> LoggingApiRec config subApi) route id
 
 instance (HasSwagger subApi, KnownSymbol name) =>
          HasSwagger (Tag name :> subApi) where
@@ -41,12 +42,8 @@ instance (HasSwagger subApi, KnownSymbol name) =>
       where
         name = symbolValT @name
 
--- | Whether to enable some type-level checks for 'Tag's and 'TagsVerification'
+-- | Whether to enable some type-level checks for 'Tag's and 'TagsDescription's
 -- correspondence.
---
--- Note that with the current implementation of 'S.Swagger' datatype your tags
--- (and thus endpoints) will be sorted alphabetically in UI, relevant ticket:
--- https://github.com/GetShopTV/swagger2/issues/165.
 data TagsVerification
     = -- | Ensure that mappings are specified exactly for those tags which
       -- appear in API.
@@ -69,12 +66,13 @@ instance HasServer subApi ctx => HasServer (TagDescriptions ver mapping :> subAp
 instance HasClient m subApi => HasClient m (TagDescriptions ver mapping :> subApi) where
     type Client m (TagDescriptions ver mapping :> subApi) = Client m subApi
     clientWithRoute pm _ = clientWithRoute pm (Proxy @subApi)
+    hoistClientMonad pm _ hst = hoistClientMonad pm (Proxy @subApi) hst
 
 instance HasLoggingServer config subApi ctx =>
          HasLoggingServer config (TagDescriptions ver mapping :> subApi) ctx where
     routeWithLog =
         inRouteServer @(TagDescriptions ver mapping :> LoggingApiRec config subApi)
-        route identity
+        route id
 
 -- | Gather all tag names used in API. Result may contain duplicates.
 type family AllApiTags api :: [Symbol] where
@@ -86,7 +84,7 @@ type family AllApiTags api :: [Symbol] where
 
 -- | Extract tags defined by this mapping.
 class ReifyTagsFromMapping (mapping :: [TyNamedParam Symbol]) where
-    reifyTagsFromMapping :: Set S.Tag
+    reifyTagsFromMapping :: HS.InsOrdHashSet S.Tag
 
 instance ReifyTagsFromMapping '[] where
     reifyTagsFromMapping = mempty
@@ -101,7 +99,7 @@ instance ( KnownSymbol name, KnownSymbol desc
         { S._tagName = symbolValT @name
         , S._tagDescription = Just $ symbolValT @desc
         , S._tagExternalDocs = Nothing
-        } `S.insert` reifyTagsFromMapping @mapping
+        } `HS.insert` reifyTagsFromMapping @mapping
 
 instance ( HasSwagger api
          , ReifyTagsFromMapping mapping

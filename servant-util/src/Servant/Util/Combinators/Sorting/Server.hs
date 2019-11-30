@@ -44,7 +44,7 @@ instance ( HasServer subApi ctx
 instance ReifyParamsNames allowed =>
          FromHttpApiData (TaggedSortingItemsList allowed) where
     parseUrlPiece =
-        first (toText . P.parseErrorPretty) . second Tagged .
+        first (toText . P.errorBundlePretty) . second Tagged .
         P.parse parser "sortBy"
       where
         parser = do

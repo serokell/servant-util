@@ -7,14 +7,14 @@ module Servant.Util.Combinators.Filtering.Server
 
 import Universum
 
-import Data.Kind (type (*))
+import Data.Kind (Type)
 import qualified Data.Map as M
 import qualified Data.Text as T
 import Fmt (Buildable (..))
 import GHC.TypeLits (KnownSymbol)
 import Network.HTTP.Types.URI (QueryText, parseQueryText)
 import Network.Wai.Internal (rawQueryString)
-import Servant ((:>), FromHttpApiData (..), HasServer (..), ServantErr (..), err400)
+import Servant ((:>), FromHttpApiData (..), HasServer (..), ServerError (..), err400)
 import Servant.Server.Internal (addParameterCheck, delayedFailFatal, withRequest)
 
 import Servant.Util.Combinators.Filtering.Base
@@ -37,7 +37,7 @@ parseQueryKey field key = do
 -- If the parameter is not recognized as filtering one, 'Nothing' is returned.
 -- Otherwise it is parsed and any potential errors are reported as-is.
 parseAutoTypeFilteringParam
-    :: forall a (filters :: [* -> *]).
+    :: forall a (filters :: [Type -> Type]).
        (filters ~ SupportedFilters a, AreAutoFilters filters, FromHttpApiData a)
     => Text -> Text -> Text -> Maybe (Either Text $ SomeTypeAutoFilter a)
 parseAutoTypeFilteringParam field key val = do

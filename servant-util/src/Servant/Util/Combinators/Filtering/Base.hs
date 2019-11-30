@@ -34,7 +34,7 @@ import Universum
 import qualified Data.Map as M
 import Data.Typeable (cast)
 import Fmt (Buildable (..),  Builder,)
-import Data.Kind (type (*))
+import Data.Kind (Type)
 import Servant (FromHttpApiData(..), ToHttpApiData (..))
 import GHC.Exts (IsList)
 
@@ -49,7 +49,7 @@ data FilterKind a
       -- ^ User-provided value is passed to backend implementation as-is,
       -- and filtering on this value should be written manually.
 
-type TyNamedFilter = TyNamedParam (FilterKind *)
+type TyNamedFilter = TyNamedParam (FilterKind Type)
 
 -- | Servant API combinator which enables filtering on given fields.
 --
@@ -69,7 +69,7 @@ type TyNamedFilter = TyNamedParam (FilterKind *)
 data FilteringParams (params :: [TyNamedFilter])
 
 -- | For a type of field, get a list of supported filtering operations on this field.
-type family SupportedFilters ty :: [* -> *]
+type family SupportedFilters ty :: [Type -> Type]
 
 -- | If no filtering command specified, think like if the given one was passed.
 pattern DefFilteringCmd :: Text
@@ -91,13 +91,13 @@ unsupportedFilteringValue errMsg = FilteringValueParser (\_ -> Left errMsg)
 type OpsDescriptions = [(Text, Text)]
 
 -- | How auto filters appear in logging.
-class BuildableAutoFilter (filter :: * -> *) where
+class BuildableAutoFilter (filter :: Type -> Type) where
     buildAutoFilter
         :: Buildable a => Text -> filter a -> Builder
 
 -- | Application of a filter type to Servant API.
 class (Typeable filter, BuildableAutoFilter filter) =>
-      IsAutoFilter (filter :: * -> *) where
+      IsAutoFilter (filter :: Type -> Type) where
 
     -- | For each supported filtering operation specifies a short plain-english
     -- description.
@@ -121,7 +121,7 @@ class (Typeable filter, BuildableAutoFilter filter) =>
     mapAutoFilterValue = fmap
 
 -- | Multi-version of 'IsFilter'.
-class AreAutoFilters (filters :: [* -> *]) where
+class AreAutoFilters (filters :: [Type -> Type]) where
     mapFilterTypes
         :: (forall filter. IsAutoFilter filter => Proxy filter -> a)
         -> Proxy filters -> [a]
@@ -158,7 +158,7 @@ instance Buildable a => Buildable (Text, SomeTypeAutoFilter a) where
     build (name, SomeTypeAutoFilter f) = buildAutoFilter name f
 
 -- | Some filter for an item of type @a@.
-data TypeFilter (fk :: * -> FilterKind *) a where
+data TypeFilter (fk :: Type -> FilterKind Type) a where
     -- | One of automatic filters for type @a@.
     -- Filter type is guaranteed to be one of @SupportedFilters a@.
     TypeAutoFilter

@@ -12,6 +12,7 @@ dependencies:
 - data-default
 - fmt
 - http-types
+- insert-ordered-containers
 - lens
 - megaparsec
 - mtl
@@ -20,10 +21,10 @@ dependencies:
 - servant
 - servant-client
 - servant-client-core
-- servant-generic
 - servant-server
 - servant-swagger
 - servant-swagger-ui
+- servant-swagger-ui-core
 - swagger2
 - text
 - text-format

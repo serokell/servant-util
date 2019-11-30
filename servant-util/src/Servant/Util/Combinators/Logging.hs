@@ -1,3 +1,5 @@
+{-# LANGUAGE PolyKinds #-}
+
 -- | Allows to enable logging of requests and responses.
 module Servant.Util.Combinators.Logging
     ( -- * Automatic requests logging
@@ -15,25 +17,24 @@ module Servant.Util.Combinators.Logging
     , serverWithLogging
     ) where
 
-import Universum hiding (log)
+import Universum
 
 import Control.Exception.Safe (handleAny)
 import Control.Monad.Error.Class (catchError, throwError)
 import Data.Default (Default (..))
+import Data.Kind (Type)
 import Data.Reflection (Reifies (..), reify)
 import Data.Swagger (Swagger)
 import qualified Data.Text as T
-import qualified Data.Text.Buildable as B
-import qualified Data.Text.Lazy.Builder as B
 import Data.Time.Clock.POSIX (getPOSIXTime)
-import Fmt (blockListF, (+|), (|+), (||+))
+import Fmt (Buildable (..), Builder, blockListF, pretty, (+|), (|+), (||+))
 import GHC.IO.Unsafe (unsafePerformIO)
 import GHC.TypeLits (KnownSymbol, symbolVal)
 import Servant.API ((:<|>) (..), (:>), Capture, Description, NoContent, QueryFlag, QueryParam', Raw,
                     ReflectMethod (..), ReqBody, Summary, Verb)
-import Servant.Server (Handler (..), HasServer (..), ServantErr (..), Server)
+import Servant.Server (Handler (..), HasServer (..), Server, ServerError (..))
 import qualified Servant.Server.Internal as SI
-import Servant.Swagger.UI (SwaggerUiHtml)
+import Servant.Swagger.UI.Core (SwaggerUiHtml)
 import System.Console.Pretty (Color (..), Style (..), color, style)
 
 import Servant.Util.Common
@@ -102,7 +103,7 @@ newtype ForResponseLog a = ForResponseLog { unForResponseLog :: a }
 
 buildListForResponse
     :: Buildable (ForResponseLog x)
-    => (forall a. [a] -> [a]) -> ForResponseLog [x] -> B.Builder
+    => (forall a. [a] -> [a]) -> ForResponseLog [x] -> Builder
 buildListForResponse truncList (ForResponseLog l) =
     let startNf = if null l then "" else "\n"
         lt = truncList l
@@ -111,8 +112,8 @@ buildListForResponse truncList (ForResponseLog l) =
               | otherwise = "\n    and " +| diff |+ " entries more..."
     in  startNf +| blockListF (map ForResponseLog lt) |+ mMore
 
-buildForResponse :: Buildable a => ForResponseLog a -> B.Builder
-buildForResponse = B.build . unForResponseLog
+buildForResponse :: Buildable a => ForResponseLog a -> Builder
+buildForResponse = build . unForResponseLog
 
 instance ( HasServer (LoggingApiRec config api) ctx
          , HasServer api ctx
@@ -238,11 +239,11 @@ instance ( HasLoggingServer config res ctx
 
 instance HasLoggingServer config res ctx =>
          HasLoggingServer config (Summary s :> res) ctx where
-    routeWithLog = inRouteServer @(Summary s :> LoggingApiRec config res) route identity
+    routeWithLog = inRouteServer @(Summary s :> LoggingApiRec config res) route id
 
 instance HasLoggingServer config res ctx =>
          HasLoggingServer config (Description d :> res) ctx where
-    routeWithLog = inRouteServer @(Description d :> LoggingApiRec config res) route identity
+    routeWithLog = inRouteServer @(Description d :> LoggingApiRec config res) route id
 
 
 -- | Unique identifier for request-response pair.
@@ -334,7 +335,7 @@ applyServantLogging configP methodP paramsInfo showResponse action = do
     catchErrors reqId st =
         flip catchError (servantErrHandler reqId st) .
         handleAny (exceptionsHandler reqId st)
-    servantErrHandler reqId timer err@ServantErr{..} = do
+    servantErrHandler reqId timer err@ServerError{..} = do
         durationText <- timer
         let errMsg = errHTTPCode |+ " "  +| errReasonPhrase |+ ":"
         log $
@@ -399,8 +400,8 @@ serverWithLogging
     :: forall api a.
        ServantLogConfig
     -> Proxy api
-    -> (forall config. Reifies config ServantLogConfig =>
-                       Proxy (LoggingApi config api) -> a)
+    -> (forall (config :: Type). Reifies config ServantLogConfig =>
+        Proxy (LoggingApi config api) -> a)
     -> a
 serverWithLogging config _ f =
     reify config $ \(Proxy :: Proxy config) -> f (Proxy @(LoggingApi config api))

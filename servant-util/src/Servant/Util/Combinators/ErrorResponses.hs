@@ -9,14 +9,14 @@ module Servant.Util.Combinators.ErrorResponses
 
 import Universum
 
-import Control.Lens (at, (?~), (<>~))
-import Servant.Swagger (HasSwagger (..))
-import Servant ((:>), HasServer (..))
-import Servant.Client (HasClient (..))
-import GHC.TypeLits (Symbol, KnownSymbol)
-import Data.Kind (type (*))
+import Control.Lens (at, (<>~), (?~))
+import Data.Kind (Type)
 import qualified Data.Swagger as S
 import Data.Swagger.Declare (runDeclare)
+import GHC.TypeLits (KnownSymbol, Symbol)
+import Servant ((:>), HasServer (..))
+import Servant.Client (HasClient (..))
+import Servant.Swagger (HasSwagger (..))
 
 import Servant.Util.Combinators.Logging
 import Servant.Util.Common
@@ -24,9 +24,9 @@ import Servant.Util.Common
 
 -- | Type-level information about an error response.
 data ErrorDesc = ErrorDesc
-    { erCode :: Nat
-    , erException :: *
-    , erDesc :: Symbol
+    { erCode      :: Nat
+    , erException :: Type
+    , erDesc      :: Symbol
     }
 
 -- | Like 'ErrorDesc', but without exception type yet.
@@ -81,10 +81,11 @@ instance HasServer subApi ctx => HasServer (ErrorResponses errors :> subApi) ctx
 instance HasClient m subApi => HasClient m (ErrorResponses errors :> subApi) where
     type Client m (ErrorResponses errors :> subApi) = Client m subApi
     clientWithRoute pm _ = clientWithRoute pm (Proxy @subApi)
+    hoistClientMonad pm _ hst = hoistClientMonad pm (Proxy @subApi) hst
 
 instance HasLoggingServer config subApi ctx =>
          HasLoggingServer config (ErrorResponses errors :> subApi) ctx where
-    routeWithLog = inRouteServer @(ErrorResponses errors :> LoggingApiRec config subApi) route identity
+    routeWithLog = inRouteServer @(ErrorResponses errors :> LoggingApiRec config subApi) route id
 
 
 class KnownErrorCodes (errors :: [ErrorDesc]) where
