@@ -6,7 +6,7 @@ module Servant.Util.Combinators.Filtering.Swagger () where
 import Universum
 
 import Control.Lens ((<>~))
-import Data.Kind (type (*))
+import Data.Kind (Type)
 import qualified Data.Swagger as S
 import qualified Data.Text as T
 import GHC.TypeLits (KnownSymbol)
@@ -64,7 +64,7 @@ manualFilterDesc =
     "Leave values matching given parameter " <> parenValueDesc @a <> "."
 
 -- | Gather swagger params for all of the given filters.
-class AutoFiltersOpsDesc (filters :: [* -> *]) where
+class AutoFiltersOpsDesc (filters :: [Type -> Type]) where
     autoFiltersOpsDesc :: OpsDescriptions
 
 instance AutoFiltersOpsDesc '[] where
@@ -80,7 +80,7 @@ instance ( IsAutoFilter filter
         ]
 
 -- | Get documentation for the given filter kind.
-class FilterKindHasSwagger (fk :: FilterKind *) where
+class FilterKindHasSwagger (fk :: FilterKind Type) where
     filterKindSwagger :: Text -> S.Param
 
 instance DescribedParam a => FilterKindHasSwagger ('ManualFilter a) where

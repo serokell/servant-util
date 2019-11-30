@@ -13,6 +13,7 @@ module Servant.Util.Common.Common
 import Universum
 
 import qualified Data.Text.Buildable as B
+import Fmt (pretty)
 import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
 import Servant.API ((:>), Capture, QueryFlag, QueryParam', ReqBody)
 import Servant.Server (Handler (..), HasServer (..), Server)
@@ -40,7 +41,7 @@ class ApiHasArgClass api where
         :: forall n someApiType a. (KnownSymbol n, api ~ someApiType n a)
         => Proxy api -> String
     apiArgName _ =
-        toString . pretty $ "'" <> B.build (symbolVal $ Proxy @n) <> "' field"
+        pretty $ "'" <> B.build (symbolVal $ Proxy @n) <> "' field"
 
 class ServerT (subApi :> res) m ~ (ApiArg subApi -> ServerT res m)
    => ApiHasArgInvariant subApi res m
@@ -58,7 +59,7 @@ instance KnownSymbol s => ApiHasArgClass (QueryParam' mods s a) where
 instance KnownSymbol s => ApiHasArgClass (QueryFlag s) where
     type ApiArg (QueryFlag s) = Bool
     apiArgName _ =
-        toString . pretty $ "'" <> B.build (symbolVal (Proxy @s)) <>  "' flag"
+        pretty $ "'" <> B.build (symbolVal (Proxy @s)) <>  "' flag"
 instance ApiHasArgClass (ReqBody ct a) where
     apiArgName _ = "request body"
 

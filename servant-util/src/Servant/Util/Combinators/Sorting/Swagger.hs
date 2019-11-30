@@ -35,7 +35,7 @@ instance (HasSwagger api, ReifyParamsNames params) =>
                 & S.paramSchema .~ paramSchema
                 )
         paramSchema = mempty
-            & S.type_ .~ S.SwaggerString
+            & S.type_ ?~ S.SwaggerString
             & S.pattern ?~ "^" <> fieldPattern <> "(," <> fieldPattern <> ")*" <> "$"
         fieldPattern =
             "(" <> "[+-](" <> allowedFieldsPattern <> ")+" <> "|" <>
