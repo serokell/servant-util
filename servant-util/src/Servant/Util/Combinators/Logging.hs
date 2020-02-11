@@ -226,7 +226,7 @@ instance ( HasServer (subApi :> res) ctx
          , ApiHasArg subApi (LoggingApiRec config res)
          , ApiCanLogArg subApi
          , Buildable (ApiArgToLog subApi)
-         , subApi ~ apiType a
+         , subApi ~ apiType (a :: Type)
          ) =>
          HasLoggingServer config (apiType a :> res) ctx where
     routeWithLog = paramRouteWithLog
