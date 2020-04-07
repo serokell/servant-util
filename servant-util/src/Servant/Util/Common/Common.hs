@@ -18,6 +18,7 @@ import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
 import Servant.API ((:>), Capture, QueryFlag, QueryParam', ReqBody)
 import Servant.Server (Handler (..), HasServer (..), Server)
 import qualified Servant.Server.Internal as SI
+import Servant.API.Modifiers (RequiredArgument)
 
 type family ApplicationLS x where
     ApplicationLS (a b) = a
@@ -55,7 +56,7 @@ type ApiHasArg subApi res =
 
 instance KnownSymbol s => ApiHasArgClass (Capture s a)
 instance KnownSymbol s => ApiHasArgClass (QueryParam' mods s a) where
-    type ApiArg (QueryParam' mods s a) = Maybe a
+    type ApiArg (QueryParam' mods s a) = RequiredArgument mods a
 instance KnownSymbol s => ApiHasArgClass (QueryFlag s) where
     type ApiArg (QueryFlag s) = Bool
     apiArgName _ =
