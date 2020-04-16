@@ -25,17 +25,19 @@ import Data.Default (Default (..))
 import Data.Kind (Type)
 import Data.Reflection (Reifies (..), reify)
 import Data.Swagger (Swagger)
-import qualified Data.Text as T
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import Fmt (Buildable (..), Builder, blockListF, pretty, (+|), (|+), (||+))
 import GHC.IO.Unsafe (unsafePerformIO)
 import GHC.TypeLits (KnownSymbol, symbolVal)
 import Servant.API ((:<|>) (..), (:>), Capture, Description, NoContent, QueryFlag, QueryParam', Raw,
-                    ReflectMethod (..), ReqBody, Summary, Verb)
+                    ReflectMethod (..), ReqBody, SBoolI, Summary, Verb)
+import Servant.API.Modifiers (FoldRequired, foldRequiredArgument)
 import Servant.Server (Handler (..), HasServer (..), Server, ServerError (..))
-import qualified Servant.Server.Internal as SI
 import Servant.Swagger.UI.Core (SwaggerUiHtml)
 import System.Console.Pretty (Color (..), Style (..), color, style)
+
+import qualified Data.Text as T
+import qualified Servant.Server.Internal as SI
 
 import Servant.Util.Common
 
@@ -188,9 +190,16 @@ instance KnownSymbol s => ApiCanLogArg (Capture s a)
 
 instance ApiCanLogArg (ReqBody ct a)
 
-instance KnownSymbol cs => ApiCanLogArg (QueryParam' mods cs a) where
+instance ( Buildable a
+         , KnownSymbol cs
+         , SBoolI (FoldRequired mods)
+         ) =>
+         ApiCanLogArg (QueryParam' mods cs a) where
     type ApiArgToLog (QueryParam' mods cs a) = a
-    toLogParamInfo _ mparam = maybe noEntry pretty mparam
+    toLogParamInfo _ mparam = foldRequiredArgument (Proxy :: Proxy mods) (\(a :: a) -> pretty a)
+      (\case
+        Just a -> pretty a
+        Nothing -> noEntry) mparam
       where
         noEntry = gray "-"
 
