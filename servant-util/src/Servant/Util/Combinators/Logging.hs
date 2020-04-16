@@ -25,7 +25,6 @@ import Data.Default (Default (..))
 import Data.Kind (Type)
 import Data.Reflection (Reifies (..), reify)
 import Data.Swagger (Swagger)
-import qualified Data.Text as T
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import Fmt (Buildable (..), Builder, blockListF, pretty, (+|), (|+), (||+))
 import GHC.IO.Unsafe (unsafePerformIO)
@@ -34,9 +33,11 @@ import Servant.API ((:<|>) (..), (:>), Capture, Description, NoContent, QueryFla
                     ReflectMethod (..), ReqBody, SBoolI, Summary, Verb)
 import Servant.API.Modifiers (FoldRequired, foldRequiredArgument)
 import Servant.Server (Handler (..), HasServer (..), Server, ServerError (..))
-import qualified Servant.Server.Internal as SI
 import Servant.Swagger.UI.Core (SwaggerUiHtml)
 import System.Console.Pretty (Color (..), Style (..), color, style)
+
+import qualified Data.Text as T
+import qualified Servant.Server.Internal as SI
 
 import Servant.Util.Common
 
