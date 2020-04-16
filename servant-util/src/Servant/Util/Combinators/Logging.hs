@@ -31,8 +31,8 @@ import Fmt (Buildable (..), Builder, blockListF, pretty, (+|), (|+), (||+))
 import GHC.IO.Unsafe (unsafePerformIO)
 import GHC.TypeLits (KnownSymbol, symbolVal)
 import Servant.API ((:<|>) (..), (:>), Capture, Description, NoContent, QueryFlag, QueryParam', Raw,
-                    ReflectMethod (..), ReqBody, Summary, Verb, SBoolI)
-import Servant.API.Modifiers (foldRequiredArgument, FoldRequired)
+                    ReflectMethod (..), ReqBody, SBoolI, Summary, Verb)
+import Servant.API.Modifiers (FoldRequired, foldRequiredArgument)
 import Servant.Server (Handler (..), HasServer (..), Server, ServerError (..))
 import qualified Servant.Server.Internal as SI
 import Servant.Swagger.UI.Core (SwaggerUiHtml)
@@ -192,11 +192,11 @@ instance ApiCanLogArg (ReqBody ct a)
 instance ( Buildable a
          , KnownSymbol cs
          , SBoolI (FoldRequired mods)
-         ) => 
+         ) =>
          ApiCanLogArg (QueryParam' mods cs a) where
     type ApiArgToLog (QueryParam' mods cs a) = a
     toLogParamInfo _ mparam = foldRequiredArgument (Proxy :: Proxy mods) (\(a :: a) -> pretty a)
-      (\case 
+      (\case
         Just a -> pretty a
         Nothing -> noEntry) mparam
       where
