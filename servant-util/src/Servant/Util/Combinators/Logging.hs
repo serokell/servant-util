@@ -7,6 +7,9 @@ module Servant.Util.Combinators.Logging
     , LoggingApiRec
     , HasLoggingServer (..)
     , ServantLogConfig (..)
+    , ResponsesLogSetting (..)
+    , TlLogConfig
+    , DefTlLogConfig
     , defaultServantLogConfig
     , ForResponseLog (..)
     , buildListForResponse
@@ -42,6 +45,10 @@ import qualified Servant.Server.Internal as SI
 
 import Servant.Util.Common
 
+---------------------------------------------------------------------------
+-- Interface
+---------------------------------------------------------------------------
+
 -- | Enables logging for server which serves given api.
 --
 -- `config` is a type at which you have to specify 'ServantLogConfig' via
@@ -63,20 +70,45 @@ data LoggingApi config api
 -- | Helper to traverse servant api and apply logging.
 data LoggingApiRec config api
 
-newtype ServantLogConfig = ServantLogConfig
+-- | Configuration for logging.
+newtype ServantLogConfig (rl :: TlLogConfig) = ServantLogConfig
     { clcLog :: Text -> IO ()
     }
+
+-- | All type-level part of configuration.
+type TlLogConfig = ResponsesLogSetting
+
+-- | How 'Buildable' instance for responses should be picked.
+data ResponsesLogSetting
+      -- | Use @instance Buildable (ForResponseLog YourResponseType)@.
+      --
+      -- This behaviour is the preferred one.
+      -- It is useful when your endpoints can return lists,
+      -- as 'Buildable' instance for lists is not defined (and is hardly legitimate).
+    = LogResponsesCustom
+      -- | Use @instance Buildable YourResponseType@.
+      --
+      -- This behaviour is useful then for each endpoint you declare a special
+      -- type to represent its response.
+    | LogResponsesPlain
 
 -- | Default logging configuration.
 --
 -- It prints logs directly to stdout.
-defaultServantLogConfig :: ServantLogConfig
+defaultServantLogConfig :: ServantLogConfig DefTlLogConfig
 defaultServantLogConfig = ServantLogConfig
   { clcLog = putTextLn
   }
 
-instance Default ServantLogConfig where
+instance (respLog ~ DefTlLogConfig) =>
+         Default (ServantLogConfig respLog) where
   def = defaultServantLogConfig
+
+type DefTlLogConfig = 'LogResponsesCustom
+
+---------------------------------------------------------------------------
+-- Implementation
+---------------------------------------------------------------------------
 
 dullColor :: Color -> Text -> Text
 dullColor c = style Faint . color c
@@ -110,7 +142,9 @@ setInPrefix failed@ApiNoParamsLogInfo{}     = failed
 setInPrefix infos@(ApiParamsLogInfo _ [] _) = infos
 setInPrefix (ApiParamsLogInfo _ path info)  = ApiParamsLogInfo True path info
 
--- | When it comes to logging responses, returned data may be very large.
+-- | Marks that 'Buildable' instance should produce limited output.
+--
+-- When it comes to logging responses, returned data may be very large.
 -- Log space is valuable (already in testnet we got truncated logs),
 -- so we have to care about printing only whose data which may be useful.
 newtype ForResponseLog a = ForResponseLog { unForResponseLog :: a }
@@ -286,7 +320,7 @@ nextRequestId = atomically $ do
 
 -- | Modify an action so that it performs all the required logging.
 applyServantLogging
-    :: ( Reifies config ServantLogConfig
+    :: ( Reifies config (ServantLogConfig respLog)
        , ReflectMethod (method :: k)
        )
     => Proxy config
@@ -376,22 +410,34 @@ applyServantLogging configP methodP paramsInfo showResponse action = do
         throwM e
 
 applyLoggingToHandler
-    :: forall config method a.
-       ( Buildable (ForResponseLog a)
-       , Reifies config ServantLogConfig
+    :: forall config method respLog a.
+       ( Buildable (ResponseWrapper respLog a)
+       , Reifies config (ServantLogConfig respLog)
        , ReflectMethod method
        )
     => Proxy config -> Proxy (method :: k) -> (ApiParamsLogInfo, Handler a) -> Handler a
-applyLoggingToHandler configP methodP (paramsInfo, handler) = do
-    applyServantLogging configP methodP paramsInfo (pretty . ForResponseLog) handler
+applyLoggingToHandler configP methodP (paramsInfo, handler) =
+    let respPrinter = pretty . ResponseWrapper @respLog
+    in applyServantLogging configP methodP paramsInfo respPrinter handler
+
+-- Helper which delegates to a proper 'Buildable' instance
+newtype ResponseWrapper (rl :: ResponsesLogSetting) a = ResponseWrapper a
+
+instance Buildable a =>
+         Buildable (ResponseWrapper 'LogResponsesPlain a) where
+  build (ResponseWrapper a) = build a
+
+instance Buildable (ForResponseLog a) =>
+         Buildable (ResponseWrapper 'LogResponsesCustom a) where
+  build (ResponseWrapper a) = build (ForResponseLog a)
 
 skipLogging :: (ApiParamsLogInfo, action) -> action
 skipLogging = snd
 
 instance ( HasServer (Verb mt st ct a) ctx
-         , Reifies config ServantLogConfig
+         , Reifies config (ServantLogConfig respLog)
          , ReflectMethod mt
-         , Buildable (ForResponseLog a)
+         , Buildable (ResponseWrapper respLog a)
          ) =>
          HasLoggingServer config (Verb (mt :: k) (st :: Nat) (ct :: [*]) a) ctx where
     routeWithLog =
@@ -416,12 +462,16 @@ instance Buildable (ForResponseLog Swagger) where
 instance Buildable (ForResponseLog (SwaggerUiHtml dir api)) where
     build _ = "Accessed documentation UI"
 
+---------------------------------------------------------------------------
+-- Interface
+---------------------------------------------------------------------------
+
 -- | Apply logging to the given server.
 serverWithLogging
-    :: forall api a.
-       ServantLogConfig
+    :: forall api respLog a.
+       (ServantLogConfig respLog)
     -> Proxy api
-    -> (forall (config :: Type). Reifies config ServantLogConfig =>
+    -> (forall (config :: Type). Reifies config (ServantLogConfig respLog) =>
         Proxy (LoggingApi config api) -> a)
     -> a
 serverWithLogging config _ f =

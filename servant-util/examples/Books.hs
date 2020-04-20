@@ -78,4 +78,4 @@ serveBooksServer =
     serverWithLogging loggingConfig (Proxy @BooksAPI) $ \sp ->
     serve sp booksHandlers
   where
-    loggingConfig = ServantLogConfig putTextLn
+    loggingConfig = defaultServantLogConfig
