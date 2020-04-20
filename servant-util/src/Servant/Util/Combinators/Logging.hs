@@ -7,6 +7,7 @@ module Servant.Util.Combinators.Logging
     , LoggingApiRec
     , HasLoggingServer (..)
     , ServantLogConfig (..)
+    , defaultServantLogConfig
     , ForResponseLog (..)
     , buildListForResponse
     , buildForResponse
@@ -65,6 +66,17 @@ data LoggingApiRec config api
 newtype ServantLogConfig = ServantLogConfig
     { clcLog :: Text -> IO ()
     }
+
+-- | Default logging configuration.
+--
+-- It prints logs directly to stdout.
+defaultServantLogConfig :: ServantLogConfig
+defaultServantLogConfig = ServantLogConfig
+  { clcLog = putTextLn
+  }
+
+instance Default ServantLogConfig where
+  def = defaultServantLogConfig
 
 dullColor :: Color -> Text -> Text
 dullColor c = style Faint . color c
