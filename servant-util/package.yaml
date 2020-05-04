@@ -57,6 +57,7 @@ executables:
 tests:
   servant-util-test:
     <<: *test-common
+    build-tools: hspec-discover:hspec-discover
     dependencies:
       - hspec
       - servant-util
