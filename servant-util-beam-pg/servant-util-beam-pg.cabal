@@ -1,0 +1,107 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.32.0.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: b1942928d7676d20d3c050c371200a0440a2444e01dc2331d26cb6afff8dc7ed
+
+name:           servant-util-beam-pg
+version:        0.1.0
+synopsis:       Primitives implementation via beam-postgres.
+description:    Please see the README on GitHub at <https://github.com/serokell/servant-util#README.md>
+category:       Web
+homepage:       https://github.com/serokell/servant-util#readme
+bug-reports:    https://github.com/serokell/servant-util/issues
+author:         Serokell
+maintainer:     hi@serokell.io
+copyright:      2019 Serokell OÜ
+license:        MPL-2.0
+build-type:     Simple
+extra-source-files:
+    README.md
+    CHANGES.md
+
+source-repository head
+  type: git
+  location: https://github.com/serokell/servant-util
+
+library
+  exposed-modules:
+      Servant.Util.Beam.Postgres
+      Servant.Util.Beam.Postgres.Filtering
+      Servant.Util.Beam.Postgres.Pagination
+      Servant.Util.Beam.Postgres.Sorting
+  other-modules:
+      Paths_servant_util_beam_pg
+  hs-source-dirs:
+      src
+  default-extensions: AllowAmbiguousTypes BangPatterns ConstraintKinds DataKinds DefaultSignatures DeriveDataTypeable DeriveGeneric EmptyCase FlexibleContexts FlexibleInstances FunctionalDependencies GADTs GeneralizedNewtypeDeriving LambdaCase MonadFailDesugaring MultiParamTypeClasses MultiWayIf NamedFieldPuns NoImplicitPrelude OverloadedStrings PatternSynonyms RankNTypes RecordWildCards ScopedTypeVariables StandaloneDeriving TemplateHaskell TupleSections TypeFamilies TypeOperators UndecidableInstances ViewPatterns TypeApplications
+  ghc-options: -Wall -Werror
+  build-tool-depends:
+      autoexporter:autoexporter
+  build-depends:
+      base >=4.7 && <5
+    , beam-core
+    , beam-postgres
+    , containers
+    , servant
+    , servant-client
+    , servant-client-core
+    , servant-server
+    , servant-util >=0.1.0 && <0.2
+    , text
+    , universum
+  default-language: Haskell2010
+
+executable servant-util-beam-pg-examples
+  main-is: Main.hs
+  other-modules:
+      Paths_servant_util_beam_pg
+  hs-source-dirs:
+      examples
+  default-extensions: AllowAmbiguousTypes BangPatterns ConstraintKinds DataKinds DefaultSignatures DeriveDataTypeable DeriveGeneric EmptyCase FlexibleContexts FlexibleInstances FunctionalDependencies GADTs GeneralizedNewtypeDeriving LambdaCase MonadFailDesugaring MultiParamTypeClasses MultiWayIf NamedFieldPuns NoImplicitPrelude OverloadedStrings PatternSynonyms RankNTypes RecordWildCards ScopedTypeVariables StandaloneDeriving TemplateHaskell TupleSections TypeFamilies TypeOperators UndecidableInstances ViewPatterns TypeApplications
+  ghc-options: -Wall -Werror -threaded -rtsopts -with-rtsopts=-N -O2
+  build-depends:
+      base >=4.7 && <5
+    , beam-core
+    , beam-postgres
+    , containers
+    , servant
+    , servant-client
+    , servant-client-core
+    , servant-server
+    , servant-util >=0.1.0 && <0.2
+    , text
+    , universum
+  default-language: Haskell2010
+
+test-suite servant-util-beam-pg-test
+  type: exitcode-stdio-1.0
+  main-is: Main.hs
+  other-modules:
+      Spec
+      Tests.Servant.Filtering.LikeSpec
+      Paths_servant_util_beam_pg
+  hs-source-dirs:
+      tests
+  default-extensions: AllowAmbiguousTypes BangPatterns ConstraintKinds DataKinds DefaultSignatures DeriveDataTypeable DeriveGeneric EmptyCase FlexibleContexts FlexibleInstances FunctionalDependencies GADTs GeneralizedNewtypeDeriving LambdaCase MonadFailDesugaring MultiParamTypeClasses MultiWayIf NamedFieldPuns NoImplicitPrelude OverloadedStrings PatternSynonyms RankNTypes RecordWildCards ScopedTypeVariables StandaloneDeriving TemplateHaskell TupleSections TypeFamilies TypeOperators UndecidableInstances ViewPatterns TypeApplications
+  ghc-options: -Wall -Werror -threaded -rtsopts -with-rtsopts=-N
+  build-tool-depends:
+      hspec-discover:hspec-discover
+  build-depends:
+      QuickCheck
+    , base >=4.7 && <5
+    , beam-core
+    , beam-postgres
+    , containers
+    , hspec
+    , servant
+    , servant-client
+    , servant-client-core
+    , servant-server
+    , servant-util >=0.1.0 && <0.2
+    , servant-util-beam-pg
+    , text
+    , universum
+  default-language: Haskell2010
