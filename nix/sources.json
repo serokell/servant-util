@@ -1,14 +1,26 @@
 {
+    "hackage.nix": {
+        "branch": "master",
+        "description": "Automatically generated Nix expressions for Hackage",
+        "homepage": "",
+        "owner": "input-output-hk",
+        "repo": "hackage.nix",
+        "rev": "6be2e8a47504a4753dc8786bdc401ace902869cd",
+        "sha256": "1dj3ks79jnh2w2npy8q0yaxngcz0d5r8l8ihqgy7afjy7wpmn1gm",
+        "type": "tarball",
+        "url": "https://github.com/input-output-hk/hackage.nix/archive/6be2e8a47504a4753dc8786bdc401ace902869cd.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
     "haskell.nix": {
         "branch": "master",
         "description": "Alternative Haskell Infrastructure for Nixpkgs",
         "homepage": "https://input-output-hk.github.io/haskell.nix",
         "owner": "input-output-hk",
         "repo": "haskell.nix",
-        "rev": "5ebce0eb3cef18551808dfa80cba8b7cd64146f0",
-        "sha256": "1574s2mqin3pl9q4m31lnc3nc0pi31sbkr99ak0fiqhhq7y6bxfc",
+        "rev": "f4136211c933b444ab2e0f358abd223929970220",
+        "sha256": "1b9nxzkg29hwczr6pb6a7arxka8z0swzq7b2bqyxqzr4qvpcjlc1",
         "type": "tarball",
-        "url": "https://github.com/input-output-hk/haskell.nix/archive/5ebce0eb3cef18551808dfa80cba8b7cd64146f0.tar.gz",
+        "url": "https://github.com/input-output-hk/haskell.nix/archive/f4136211c933b444ab2e0f358abd223929970220.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "nixpkgs": {
@@ -17,10 +29,22 @@
         "homepage": "",
         "owner": "serokell",
         "repo": "nixpkgs",
-        "rev": "6951747f4f4e9e27580150eb91587af94e41640d",
-        "sha256": "03rl26632vrbpqfbdvrkbh8gfvn6na5dq8k16xib723gf1p1xd3l",
+        "rev": "ec2598d025b7670472175413748ce688a60712b9",
+        "sha256": "0b1acpgy9jbf57zxqk0zqza7yk2a70q8mrhd519rq8kmgc95dw1x",
         "type": "tarball",
-        "url": "https://github.com/serokell/nixpkgs/archive/6951747f4f4e9e27580150eb91587af94e41640d.tar.gz",
+        "url": "https://github.com/serokell/nixpkgs/archive/ec2598d025b7670472175413748ce688a60712b9.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "stackage.nix": {
+        "branch": "master",
+        "description": "Automatically generated Nix expressions of Stackage snapshots",
+        "homepage": "",
+        "owner": "input-output-hk",
+        "repo": "stackage.nix",
+        "rev": "f50e24fa7a734f2291e8d940be33d917aa7456ad",
+        "sha256": "0rw35vllm81nnmvjqsl09qs00bw7gmj965p88rd250n80nv1g5c9",
+        "type": "tarball",
+        "url": "https://github.com/input-output-hk/stackage.nix/archive/f50e24fa7a734f2291e8d940be33d917aa7456ad.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     }
 }

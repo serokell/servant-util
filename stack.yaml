@@ -1,6 +1,6 @@
 # When you update the resolver or add new packages to `extra-deps`, you should
-# also bump haskell.nix version used by CI with `niv update haskell.nix`
-# command, to make sure it contains latest stackage and hackage indexes
+# also bump hackage and stackage indexes used by CI:
+# $ niv update hackage.nix; niv update stackage.nix
 resolver: lts-14.16
 
 packages:
