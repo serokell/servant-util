@@ -1,7 +1,7 @@
 rec {
   sources = import ./nix/sources.nix;
   haskellNix = import sources."haskell.nix" {
-    sourceOverrides = { hackage = sources."hackage.nix"; stackage = sources."stackage.nix"; };
+    sourcesOverride = { hackage = sources."hackage.nix"; stackage = sources."stackage.nix"; };
   };
   pkgs = import sources.nixpkgs haskellNix.nixpkgsArgs;
 
