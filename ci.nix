@@ -1,7 +1,7 @@
 rec {
   sources = import ./nix/sources.nix;
   haskellNix = import sources."haskell.nix" {
-    sourceOverrides = { hackage = sources."hackage.nix"; stackage = sources."stackage.nix"; };
+    sourcesOverride = { hackage = sources."hackage.nix"; stackage = sources."stackage.nix"; };
   };
   pkgs = import sources.nixpkgs haskellNix.nixpkgsArgs;
 
@@ -53,7 +53,9 @@ rec {
 
   # returns a list of all components for a package
   get-package-components = pkg: with pkg.components; with pkgs.lib;
-    optional (pkg ? library) library ++ attrValues exes ++ attrValues tests;
+    optionals (pkg ? library) [ library library.haddock ]
+    ++ attrValues exes
+    ++ attrValues tests;
 
   # a list of all components from all local packages
   all-components = pkgs.lib.concatMap (pkg: get-package-components hs-pkgs.${pkg}) local-packages-names;
