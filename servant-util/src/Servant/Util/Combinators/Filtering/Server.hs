@@ -7,7 +7,6 @@ module Servant.Util.Combinators.Filtering.Server
 
 import Universum
 
-import Data.Kind (Type)
 import qualified Data.Map as M
 import qualified Data.Text as T
 import Fmt (Buildable (..))

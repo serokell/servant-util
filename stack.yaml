@@ -1,7 +1,7 @@
 # When you update the resolver or add new packages to `extra-deps`, you should
 # also bump hackage and stackage indexes used by CI:
 # $ niv update hackage.nix; niv update stackage.nix
-resolver: lts-14.16
+resolver: lts-16.5
 
 packages:
 - servant-util
@@ -9,6 +9,14 @@ packages:
 
 extra-deps:
 - pretty-terminal-0.1.0.0
+- beam-core-0.9.0.0@sha256:e5b1cb4d5b8a8a166f3373e8718672a3884feb9a5a133404b047b0af76538023,5282
+- beam-postgres-0.5.0.0@sha256:3008f802b25fffaee2edf7f8f840a073ee630049031cda0b4ea7912b6656c813,4333
+- text-format-0.3.2@sha256:2a3fc17cf87120fcfdbca62a0da59759755549285841cdc1483081c35fb3d115,1814
+- beam-migrate-0.5.0.0@sha256:d3f7e333ec9e96122ccec6be0d38a88f766dfc248323be73fd0b3cee245ea421,4923
+- dependent-map-0.4.0.0@sha256:ca2b131046f4340a1c35d138c5a003fe4a5be96b14efc26291ed35fd08c62221,1657
+- dependent-sum-0.7.1.0@sha256:5599aa89637db434431b1dd3fa7c34bc3d565ee44f0519bfbc877be1927c2531,2068
+- constraints-extras-0.3.0.2@sha256:013b8d0392582c6ca068e226718a4fe8be8e22321cc0634f6115505bf377ad26,1853
+
 
 nix:
-  packages: [zlib, postgresql]
+  packages: [zlib, postgresql, lzma]

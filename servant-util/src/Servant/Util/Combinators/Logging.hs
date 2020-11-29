@@ -17,12 +17,11 @@ module Servant.Util.Combinators.Logging
     , serverWithLogging
     ) where
 
-import Universum
+import Universum hiding (handleAny)
 
 import Control.Exception.Safe (handleAny)
 import Control.Monad.Error.Class (catchError, throwError)
 import Data.Default (Default (..))
-import Data.Kind (Type)
 import Data.Reflection (Reifies (..), reify)
 import Data.Swagger (Swagger)
 import Data.Time.Clock.POSIX (getPOSIXTime)

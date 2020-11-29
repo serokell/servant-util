@@ -34,7 +34,6 @@ import Universum
 import qualified Data.Map as M
 import Data.Typeable (cast)
 import Fmt (Buildable (..),  Builder,)
-import Data.Kind (Type)
 import Servant (FromHttpApiData(..), ToHttpApiData (..))
 import GHC.Exts (IsList)
 

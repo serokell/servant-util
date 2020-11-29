@@ -29,7 +29,6 @@ _definitions:
         - GADTs
         - GeneralizedNewtypeDeriving
         - LambdaCase
-        - MonadFailDesugaring
         - MultiParamTypeClasses
         - MultiWayIf
         - NamedFieldPuns
