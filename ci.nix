@@ -31,7 +31,7 @@ rec {
       # configuration for local packages
       packages = pkgs.lib.genAttrs local-packages-names (packageName: {
         # disable optimizations, error on warning
-        package.ghcOptions = "-O0 -Werror";
+        ghcOptions = [ "-O0" "-Werror" ];
 
         # run haddock for local packages
         doHaddock = true;
