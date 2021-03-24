@@ -8,7 +8,9 @@ import Data.Char (isAlphaNum)
 import qualified Data.List as L
 import qualified Data.Set as S
 import Servant.API ((:>), FromHttpApiData (..))
-import Servant.Server (HasServer (..), Tagged (..), unTagged)
+import Servant.Server (DefaultErrorFormatters, ErrorFormatters, HasServer (..), Tagged (..),
+                       unTagged)
+import Servant.Server.Internal.Context (type (.++), HasContextEntry)
 import Text.Megaparsec ((<?>))
 import qualified Text.Megaparsec as P
 import qualified Text.Megaparsec.Char as P
@@ -26,6 +28,7 @@ sortingCheckDuplicates items =
 
 -- | Consumes "sortBy" query parameter and fetches sorting parameters contained in it.
 instance ( HasServer subApi ctx
+         , HasContextEntry (ctx .++ DefaultErrorFormatters) ErrorFormatters
          , ReifyParamsNames params
          ) =>
          HasServer (SortingParams params :> subApi) ctx where

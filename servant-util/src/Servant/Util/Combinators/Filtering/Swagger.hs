@@ -6,7 +6,6 @@ module Servant.Util.Combinators.Filtering.Swagger () where
 import Universum
 
 import Control.Lens ((<>~))
-import Data.Kind (Type)
 import qualified Data.Swagger as S
 import qualified Data.Text as T
 import GHC.TypeLits (KnownSymbol)

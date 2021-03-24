@@ -2,22 +2,25 @@
 
 module Servant.Util.Common.HList where
 
+import Data.Kind (Type)
+
+
 -- TODO: move to vinyl one day.
 
 -- | Servant package defines their own 'HList', so we also can (to avoid a large dependency).
-data HList (f :: k -> *) (l :: [k]) where
+data HList (f :: k -> Type) (l :: [k]) where
     HNil :: HList f '[]
     HCons :: f a -> HList f as -> HList f (a ': as)
 infixr 3 `HCons`
 
-(.*.) :: forall (f :: k -> *) (a :: k) (as :: [k]).
+(.*.) :: forall k (f :: k -> Type) (a :: k) (as :: [k]).
          f a -> HList f as -> HList f (a : as)
 (.*.) = HCons
 infixr 3 .*.
 
 
 class HListFromTuple a where
-    type HListTuple a :: *
+    type HListTuple a :: Type
     htuple :: HListTuple a -> a
 
 instance HListFromTuple (HList f '[]) where

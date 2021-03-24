@@ -21,7 +21,6 @@ import Universum hiding (filter)
 import Data.Coerce (coerce)
 import Data.Default (Default (..))
 import GHC.TypeLits (ErrorMessage (..), KnownSymbol, TypeError)
-import Servant (If)
 
 import Servant.Util.Combinators.Filtering.Base
 import Servant.Util.Combinators.Filtering.Filters

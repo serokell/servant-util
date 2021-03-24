@@ -9,7 +9,7 @@ module Servant.Util.Internal.Util
 
 import Universum
 
-import GHC.TypeLits (ErrorMessage (..), KnownNat, Nat, TypeError)
+import GHC.TypeLits (ErrorMessage (..), TypeError)
 import Servant (FromHttpApiData (..), ToHttpApiData (..))
 
 newtype Positive a = PositiveUnsafe { unPositive :: a }
