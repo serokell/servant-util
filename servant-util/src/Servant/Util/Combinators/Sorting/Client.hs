@@ -5,7 +5,7 @@ module Servant.Util.Combinators.Sorting.Client () where
 import Universum
 
 import qualified Data.Text as T
-import Servant.API ((:>), ToHttpApiData (..))
+import Servant.API (ToHttpApiData (..), (:>))
 import Servant.Client.Core (Client, HasClient (..))
 import Servant.Server (Tagged (..))
 

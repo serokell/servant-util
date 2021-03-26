@@ -8,10 +8,9 @@ import Universum
 
 import qualified Data.List as L
 import Data.Typeable (cast)
-import Fmt (Buildable (..), Builder, fmt)
-import Fmt ((+|), (|+))
+import Fmt (Buildable (..), Builder, fmt, (+|), (|+))
 import GHC.TypeLits (KnownSymbol)
-import Servant ((:>), HasServer (..))
+import Servant (HasServer (..), (:>))
 
 import Servant.Util.Combinators.Filtering.Base
 import Servant.Util.Combinators.Filtering.Server

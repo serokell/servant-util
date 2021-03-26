@@ -13,8 +13,8 @@ import Control.Lens ((<>~), (?~))
 import Data.Default (Default (..))
 import qualified Data.Swagger as S
 import qualified Data.Text as T
-import Servant ((:>), DefaultErrorFormatters, ErrorFormatters, HasContextEntry, HasServer (..),
-                QueryParam)
+import Servant (DefaultErrorFormatters, ErrorFormatters, HasContextEntry, HasServer (..),
+                QueryParam, (:>))
 import Servant.Client (HasClient (..))
 import Servant.Swagger (HasSwagger (..))
 

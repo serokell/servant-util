@@ -27,9 +27,9 @@ data FilterMatching a
 
 instance BuildableAutoFilter FilterMatching where
     buildAutoFilter name = \case
-        FilterMatching v -> build name <> " = " <> build v
+        FilterMatching v    -> build name <> " = " <> build v
         FilterNotMatching v -> build name <> " /= " <> build v
-        FilterItemsIn v -> build name <> " ∊ " <> listF v
+        FilterItemsIn v     -> build name <> " ∊ " <> listF v
 
 instance IsAutoFilter FilterMatching where
     autoFilterEnglishOpsNames =
@@ -57,9 +57,9 @@ instance IsAutoFilter FilterMatching where
             mapM parseUrlPiece vals
 
     autoFilterEncode = \case
-        FilterMatching v -> (DefFilteringCmd, toQueryParam v)
+        FilterMatching v    -> (DefFilteringCmd, toQueryParam v)
         FilterNotMatching v -> ("neq", toQueryParam v)
-        FilterItemsIn vs -> ("in", "[" <> T.intercalate "," (map toQueryParam vs) <> "]")
+        FilterItemsIn vs    -> ("in", "[" <> T.intercalate "," (map toQueryParam vs) <> "]")
 
 
 -- | Support for @(<)@, @(>)@, @(<=)@ and @(>=)@ operations.
@@ -72,8 +72,8 @@ data FilterComparing a
 
 instance BuildableAutoFilter FilterComparing where
     buildAutoFilter name = \case
-        FilterGT v -> build name <> " > " <> build v
-        FilterLT v -> build name <> " < " <> build v
+        FilterGT v  -> build name <> " > " <> build v
+        FilterLT v  -> build name <> " < " <> build v
         FilterGTE v -> build name <> " >= " <> build v
         FilterLTE v -> build name <> " <= " <> build v
 
@@ -101,8 +101,8 @@ instance IsAutoFilter FilterComparing where
         ]
 
     autoFilterEncode = \case
-        FilterGT v -> ("gt", toQueryParam v)
-        FilterLT v -> ("lt", toQueryParam v)
+        FilterGT v  -> ("gt", toQueryParam v)
+        FilterLT v  -> ("lt", toQueryParam v)
         FilterGTE v -> ("gte", toQueryParam v)
         FilterLTE v -> ("lte", toQueryParam v)
 

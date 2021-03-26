@@ -7,7 +7,7 @@ import Universum
 
 import GHC.TypeLits (ErrorMessage (..), Symbol, TypeError)
 import Network.HTTP.Types.Method (Method, StdMethod)
-import Servant ((:<|>), (:>), EmptyAPI, Raw, ReflectMethod (..), Verb)
+import Servant (EmptyAPI, Raw, ReflectMethod (..), Verb, (:<|>), (:>))
 
 -------------------------------------------------------------------------
 -- CORS methods coherence

@@ -15,7 +15,7 @@ import Universum
 import qualified Data.Text.Buildable as B
 import Fmt (pretty)
 import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
-import Servant.API ((:>), Capture, QueryFlag, QueryParam', ReqBody)
+import Servant.API (Capture, QueryFlag, QueryParam', ReqBody, (:>))
 import Servant.API.Modifiers (RequiredArgument)
 import Servant.Server (Handler (..), HasServer (..), Server)
 import qualified Servant.Server.Internal as SI

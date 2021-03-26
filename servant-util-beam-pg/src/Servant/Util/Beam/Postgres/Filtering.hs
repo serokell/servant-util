@@ -37,17 +37,16 @@ module Servant.Util.Beam.Postgres.Filtering
 
 import Universum
 
+import Database.Beam.Backend.SQL (BeamSqlBackend, BeamSqlBackendIsString, BeamSqlBackendSyntax,
+                                  HasSqlValueSyntax, Sql92ExpressionValueSyntax,
+                                  Sql92SelectSelectTableSyntax, Sql92SelectTableExpressionSyntax)
 import Database.Beam.Backend.SQL.SQL92 (Sql92SelectSyntax)
-import Database.Beam.Backend.SQL (HasSqlValueSyntax,
-                                  Sql92ExpressionValueSyntax, BeamSqlBackendIsString, BeamSqlBackend,
-                                  Sql92SelectSelectTableSyntax, Sql92SelectTableExpressionSyntax,
-                                  BeamSqlBackendSyntax)
 import Database.Beam.Query (HasSqlEqualityCheck, Q, guard_, in_, like_, val_, (&&.), (/=.), (<.),
                             (<=.), (==.), (>.), (>=.))
 import Database.Beam.Query.Internal (QExpr)
 
-import Servant.Util.Combinators.Filtering.Base
 import Servant.Util.Combinators.Filtering.Backend
+import Servant.Util.Combinators.Filtering.Base
 import Servant.Util.Combinators.Filtering.Filters
 
 -- | Implements filters via Beam query expressions ('QExpr').
@@ -72,9 +71,9 @@ instance ( HasSqlEqualityCheck be a
          ) =>
          AutoFilterSupport (QExprFilterBackend be s) FilterMatching a where
     autoFilterSupport = \case
-        FilterMatching v -> (==. val_ v)
+        FilterMatching v    -> (==. val_ v)
         FilterNotMatching v -> (/=. val_ v)
-        FilterItemsIn vs -> (`in_` map val_ vs)
+        FilterItemsIn vs    -> (`in_` map val_ vs)
 
 instance ( BeamSqlBackend be
          , HasSqlValueSyntax
@@ -87,8 +86,8 @@ instance ( BeamSqlBackend be
          ) =>
          AutoFilterSupport (QExprFilterBackend be s) FilterComparing a where
     autoFilterSupport = \case
-        FilterGT v -> (>. val_ v)
-        FilterLT v -> (<. val_ v)
+        FilterGT v  -> (>. val_ v)
+        FilterLT v  -> (<. val_ v)
         FilterGTE v -> (>=. val_ v)
         FilterLTE v -> (<=. val_ v)
 
@@ -102,16 +101,16 @@ likeToSqlPattern = go . toString . unLikePattern
     go = \case
         Esc : '.' : r -> '.' : go r
         Esc : '*' : r -> '*' : go r
-        Esc : c : r -> Esc : c : go r
+        Esc : c : r   -> Esc : c : go r
 
-        '_' : r -> PgEsc : '_' : go r
-        '%' : r -> PgEsc : '%' : go r
+        '_' : r       -> PgEsc : '_' : go r
+        '%' : r       -> PgEsc : '%' : go r
 
-        '.' : r -> '_' : go r
-        '*' : r -> '%' : go r
+        '.' : r       -> '_' : go r
+        '*' : r       -> '%' : go r
 
-        c : r -> c : go r
-        [] -> []
+        c : r         -> c : go r
+        []            -> []
 
 instance ( IsString text
          , BeamSqlBackend be

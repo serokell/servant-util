@@ -27,8 +27,8 @@ import Data.Time.Clock.POSIX (getPOSIXTime)
 import Fmt (Buildable (..), Builder, blockListF, pretty, (+|), (|+), (||+))
 import GHC.IO.Unsafe (unsafePerformIO)
 import GHC.TypeLits (KnownSymbol, symbolVal)
-import Servant.API ((:<|>) (..), (:>), Capture, Description, NoContent, QueryFlag, QueryParam', Raw,
-                    ReflectMethod (..), ReqBody, SBoolI, Summary, Verb)
+import Servant.API (Capture, Description, NoContent, QueryFlag, QueryParam', Raw,
+                    ReflectMethod (..), ReqBody, SBoolI, Summary, Verb, (:<|>) (..), (:>))
 import Servant.API.Modifiers (FoldRequired, foldRequiredArgument)
 import Servant.Server (Handler (..), HasServer (..), Server, ServerError (..))
 import Servant.Swagger.UI.Core (SwaggerUiHtml)
@@ -196,7 +196,7 @@ instance ( Buildable a
     type ApiArgToLog (QueryParam' mods cs a) = a
     toLogParamInfo _ mparam = foldRequiredArgument (Proxy :: Proxy mods) (\(a :: a) -> pretty a)
       (\case
-        Just a -> pretty a
+        Just a  -> pretty a
         Nothing -> noEntry) mparam
       where
         noEntry = gray "-"
