@@ -19,18 +19,16 @@ module Servant.Util.Combinators.Logging
 
 import Universum
 
-import Control.Exception.Safe (handleAny)
 import Control.Monad.Error.Class (catchError, throwError)
 import Data.Default (Default (..))
-import Data.Kind (Type)
 import Data.Reflection (Reifies (..), reify)
 import Data.Swagger (Swagger)
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import Fmt (Buildable (..), Builder, blockListF, pretty, (+|), (|+), (||+))
 import GHC.IO.Unsafe (unsafePerformIO)
 import GHC.TypeLits (KnownSymbol, symbolVal)
-import Servant.API ((:<|>) (..), (:>), Capture, Description, NoContent, QueryFlag, QueryParam', Raw,
-                    ReflectMethod (..), ReqBody, SBoolI, Summary, Verb)
+import Servant.API (Capture, Description, NoContent, QueryFlag, QueryParam', Raw,
+                    ReflectMethod (..), ReqBody, SBoolI, Summary, Verb, (:<|>) (..), (:>))
 import Servant.API.Modifiers (FoldRequired, foldRequiredArgument)
 import Servant.Server (Handler (..), HasServer (..), Server, ServerError (..))
 import Servant.Swagger.UI.Core (SwaggerUiHtml)
@@ -175,7 +173,7 @@ instance ( KnownSymbol path
 -- | Describes a way to log a single parameter.
 class ApiHasArgClass subApi =>
       ApiCanLogArg subApi where
-    type ApiArgToLog subApi :: *
+    type ApiArgToLog subApi :: Type
     type ApiArgToLog subApi = ApiArg subApi
 
     toLogParamInfo
@@ -198,7 +196,7 @@ instance ( Buildable a
     type ApiArgToLog (QueryParam' mods cs a) = a
     toLogParamInfo _ mparam = foldRequiredArgument (Proxy :: Proxy mods) (\(a :: a) -> pretty a)
       (\case
-        Just a -> pretty a
+        Just a  -> pretty a
         Nothing -> noEntry) mparam
       where
         noEntry = gray "-"
@@ -364,7 +362,7 @@ applyServantLogging configP methodP paramsInfo showResponse action = do
         throwM e
 
 applyLoggingToHandler
-    :: forall config method a.
+    :: forall k config method a.
        ( Buildable (ForResponseLog a)
        , Reifies config ServantLogConfig
        , ReflectMethod method
@@ -381,7 +379,7 @@ instance ( HasServer (Verb mt st ct a) ctx
          , ReflectMethod mt
          , Buildable (ForResponseLog a)
          ) =>
-         HasLoggingServer config (Verb (mt :: k) (st :: Nat) (ct :: [*]) a) ctx where
+         HasLoggingServer config (Verb (mt :: k) (st :: Nat) (ct :: [Type]) a) ctx where
     routeWithLog =
         inRouteServer @(Verb mt st ct a) route $
         applyLoggingToHandler (Proxy @config) (Proxy @mt)

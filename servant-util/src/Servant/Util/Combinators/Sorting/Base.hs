@@ -15,7 +15,7 @@ module Servant.Util.Combinators.Sorting.Base
 import Universum
 
 import Fmt (Buildable (..))
-import Servant ((:>), QueryParam)
+import Servant (QueryParam, (:>))
 import Servant.Server (Tagged (..))
 import Servant.Util.Common
 

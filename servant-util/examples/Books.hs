@@ -4,11 +4,10 @@ import Universum
 
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Aeson.TH (defaultOptions, deriveJSON)
-import Fmt ((+|), (|+))
-import Fmt (Buildable (..))
+import Fmt (Buildable (..), (+|), (|+))
 import qualified Network.Wai.Handler.Warp as Warp
-import Servant ((:<|>) (..), (:>), FromHttpApiData, Get, JSON, PostCreated, QueryParam, ReqBody,
-                Server, serve)
+import Servant (FromHttpApiData, Get, JSON, PostCreated, QueryParam, ReqBody, Server, serve,
+                (:<|>) (..), (:>))
 
 import Servant.Util
 

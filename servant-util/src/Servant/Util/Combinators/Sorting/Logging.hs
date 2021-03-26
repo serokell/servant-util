@@ -7,14 +7,16 @@ import Universum
 import qualified Data.List as L
 import Fmt (Buildable (..), fmt)
 import Servant.API ((:>))
-import Servant.Server (HasServer (..))
+import Servant.Server (DefaultErrorFormatters, ErrorFormatters, HasContextEntry, HasServer (..))
 
+import Servant.Server.Internal.Context (type (.++))
 import Servant.Util.Combinators.Logging
 import Servant.Util.Combinators.Sorting.Base
 import Servant.Util.Combinators.Sorting.Server ()
 import Servant.Util.Common
 
 instance ( HasLoggingServer config subApi ctx
+         , HasContextEntry (ctx .++ DefaultErrorFormatters) ErrorFormatters
          , ReifyParamsNames params
          ) =>
          HasLoggingServer config (SortingParams params :> subApi) ctx where

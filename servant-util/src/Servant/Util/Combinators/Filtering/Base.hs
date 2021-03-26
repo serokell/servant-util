@@ -1,5 +1,5 @@
-{-# LANGUAGE TypeInType #-}
 {-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE TypeInType    #-}
 
 module Servant.Util.Combinators.Filtering.Base
     ( FilterKind (..)
@@ -33,10 +33,9 @@ import Universum
 
 import qualified Data.Map as M
 import Data.Typeable (cast)
-import Fmt (Buildable (..),  Builder,)
-import Data.Kind (Type)
-import Servant (FromHttpApiData(..), ToHttpApiData (..))
+import Fmt (Buildable (..), Builder)
 import GHC.Exts (IsList)
+import Servant (FromHttpApiData (..), ToHttpApiData (..))
 
 import Servant.Util.Common
 

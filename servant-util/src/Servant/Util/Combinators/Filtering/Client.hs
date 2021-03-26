@@ -6,7 +6,7 @@ import Universum hiding (filter)
 
 import Data.Typeable (cast)
 import GHC.TypeLits (KnownSymbol)
-import Servant ((:>), ToHttpApiData (..), toQueryParam)
+import Servant (ToHttpApiData (..), toQueryParam, (:>))
 import Servant.Client (HasClient (..))
 import Servant.Client.Core.Request (Request, appendToQueryString)
 
@@ -22,7 +22,7 @@ import Servant.Util.Common
 typeFilterToReq :: ToHttpApiData a => TypeFilter fk a -> (Text, Text)
 typeFilterToReq = \case
     TypeAutoFilter (SomeTypeAutoFilter filter) -> autoFilterEncode filter
-    TypeManualFilter val -> (DefFilteringCmd, toQueryParam val)
+    TypeManualFilter val                       -> (DefFilteringCmd, toQueryParam val)
 
 -- | Apply filter to a client request being built.
 class SomeFilterToReq params where

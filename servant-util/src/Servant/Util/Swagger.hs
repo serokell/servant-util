@@ -11,11 +11,11 @@ module Servant.Util.Swagger
 import Universum
 
 import Control.Exception (assert)
-import Control.Lens (ix, makePrisms, zoom, (?=), _head)
+import Control.Lens (_head, ix, makePrisms, zoom, (?=))
 import qualified Data.Swagger as S
 import GHC.TypeLits (KnownSymbol, Symbol)
-import Servant ((:<|>), (:>), Capture', Description, EmptyAPI, NoContent, QueryFlag, QueryParam',
-                Raw, StdMethod, Verb)
+import Servant (Capture', Description, EmptyAPI, NoContent, QueryFlag, QueryParam', Raw, StdMethod,
+                Verb, (:<|>), (:>))
 import Servant.Swagger (HasSwagger (..))
 
 import Servant.Util.Common

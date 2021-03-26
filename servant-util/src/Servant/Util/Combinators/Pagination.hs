@@ -13,10 +13,12 @@ import Control.Lens ((<>~), (?~))
 import Data.Default (Default (..))
 import qualified Data.Swagger as S
 import qualified Data.Text as T
-import Servant ((:>), HasServer (..), QueryParam)
+import Servant (DefaultErrorFormatters, ErrorFormatters, HasContextEntry, HasServer (..),
+                QueryParam, (:>))
 import Servant.Client (HasClient (..))
 import Servant.Swagger (HasSwagger (..))
 
+import Servant.Server.Internal.Context (type (.++))
 import Servant.Util.Combinators.Logging
 import Servant.Util.Common
 import Servant.Util.Internal.Util
@@ -46,7 +48,9 @@ type PaginationParamsExpanded subApi =
     QueryParam "limit" (Positive Natural) :>
     subApi
 
-instance HasServer subApi ctx => HasServer (PaginationParams :> subApi) ctx where
+instance ( HasServer subApi ctx
+         , HasContextEntry (ctx .++ DefaultErrorFormatters) ErrorFormatters
+         ) => HasServer (PaginationParams :> subApi) ctx where
     type ServerT (PaginationParams :> subApi) m =
         PaginationSpec -> ServerT subApi m
 
@@ -61,8 +65,11 @@ instance HasServer subApi ctx => HasServer (PaginationParams :> subApi) ctx wher
     hoistServerWithContext _ pc nt s =
         hoistServerWithContext (Proxy @subApi) pc nt . s
 
-instance HasLoggingServer config subApi ctx =>
-         HasLoggingServer config (PaginationParams :> subApi) ctx where
+instance
+  ( HasLoggingServer config subApi ctx
+  , HasContextEntry (ctx .++ DefaultErrorFormatters) ErrorFormatters
+  ) =>
+  HasLoggingServer config (PaginationParams :> subApi) ctx where
     routeWithLog =
         inRouteServer @(PaginationParams :> LoggingApiRec config subApi) route $
         \(paramsInfo, handler) pagination@PaginationSpec{..} ->

@@ -19,7 +19,6 @@ module Servant.Util.Combinators.Filtering.Backend
 
 import Universum
 
-import Data.Kind (Type)
 import Data.Typeable (gcast1)
 import GHC.TypeLits (KnownSymbol)
 
@@ -81,7 +80,6 @@ instance TypeAutoFiltersSupport' backend '[] a where
 
 instance ( AutoFilterSupport backend filter a
          , TypeAutoFiltersSupport' backend filters a
-         , Typeable a
          ) =>
          TypeAutoFiltersSupport' backend (filter ': filters) a where
     typeAutoFiltersSupport' sf@(SomeTypeAutoFilter filtr) = asum

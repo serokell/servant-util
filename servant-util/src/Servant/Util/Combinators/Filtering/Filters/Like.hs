@@ -12,7 +12,7 @@ import Universum
 import qualified Data.Map as M
 import qualified Data.Text.Lazy as LT
 import Fmt (Buildable (..), (+|), (|+))
-import Servant (ToHttpApiData (..), FromHttpApiData (..))
+import Servant (FromHttpApiData (..), ToHttpApiData (..))
 import System.Console.Pretty (Color (..), Style (..), color, style)
 
 import Servant.Util.Combinators.Filtering.Base

@@ -10,11 +10,10 @@ module Servant.Util.Combinators.ErrorResponses
 import Universum
 
 import Control.Lens (at, (<>~), (?~))
-import Data.Kind (Type)
 import qualified Data.Swagger as S
 import Data.Swagger.Declare (runDeclare)
 import GHC.TypeLits (KnownSymbol, Symbol)
-import Servant ((:>), HasServer (..))
+import Servant (HasServer (..), (:>))
 import Servant.Client (HasClient (..))
 import Servant.Swagger (HasSwagger (..))
 

@@ -10,7 +10,7 @@ import Control.Lens (at, (?~))
 import qualified Data.HashSet.InsOrd as HS
 import qualified Data.Swagger as S
 import GHC.TypeLits (ErrorMessage (..), KnownSymbol, Symbol, TypeError)
-import Servant ((:<|>), (:>), HasServer (..), StdMethod, Verb)
+import Servant (HasServer (..), StdMethod, Verb, (:<|>), (:>))
 import Servant.Client (HasClient (..))
 import Servant.Swagger (HasSwagger (..))
 

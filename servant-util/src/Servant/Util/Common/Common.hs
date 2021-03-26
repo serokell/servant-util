@@ -15,10 +15,10 @@ import Universum
 import qualified Data.Text.Buildable as B
 import Fmt (pretty)
 import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
-import Servant.API ((:>), Capture, QueryFlag, QueryParam', ReqBody)
+import Servant.API (Capture, QueryFlag, QueryParam', ReqBody, (:>))
+import Servant.API.Modifiers (RequiredArgument)
 import Servant.Server (Handler (..), HasServer (..), Server)
 import qualified Servant.Server.Internal as SI
-import Servant.API.Modifiers (RequiredArgument)
 
 type family ApplicationLS x where
     ApplicationLS (a b) = a
@@ -31,7 +31,7 @@ type family ApplicationRS x where
 class ApiHasArgClass api where
     -- | For arguments-specifiers of API, get argument type.
     -- E.g. @Capture "cap" Int@ -> @Int@.
-    type ApiArg api :: *
+    type ApiArg api :: Type
     type ApiArg api = ApplicationRS api
 
     -- | Name of argument.

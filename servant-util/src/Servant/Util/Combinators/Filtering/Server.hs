@@ -7,14 +7,13 @@ module Servant.Util.Combinators.Filtering.Server
 
 import Universum
 
-import Data.Kind (Type)
 import qualified Data.Map as M
 import qualified Data.Text as T
 import Fmt (Buildable (..))
 import GHC.TypeLits (KnownSymbol)
 import Network.HTTP.Types.URI (QueryText, parseQueryText)
 import Network.Wai.Internal (rawQueryString)
-import Servant ((:>), FromHttpApiData (..), HasServer (..), ServerError (..), err400)
+import Servant (FromHttpApiData (..), HasServer (..), ServerError (..), err400, (:>))
 import Servant.Server.Internal (addParameterCheck, delayedFailFatal, withRequest)
 
 import Servant.Util.Combinators.Filtering.Base

@@ -50,14 +50,14 @@ instance FilterBackend DummyFilteringBackend where
 
 instance Eq a => AutoFilterSupport DummyFilteringBackend FilterMatching a where
     autoFilterSupport = \case
-        FilterMatching v -> (== v)
+        FilterMatching v    -> (== v)
         FilterNotMatching v -> (/= v)
-        FilterItemsIn vs -> (`elem` vs)
+        FilterItemsIn vs    -> (`elem` vs)
 
 instance Ord a => AutoFilterSupport DummyFilteringBackend FilterComparing a where
     autoFilterSupport = \case
-        FilterGT v -> (> v)
-        FilterLT v -> (< v)
+        FilterGT v  -> (> v)
+        FilterLT v  -> (< v)
         FilterGTE v -> (>= v)
         FilterLTE v -> (<= v)
 
