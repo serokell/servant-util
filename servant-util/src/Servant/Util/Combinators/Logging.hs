@@ -27,7 +27,7 @@ import Data.Time.Clock.POSIX (getPOSIXTime)
 import Fmt (Buildable (..), Builder, blockListF, pretty, (+|), (|+), (||+))
 import GHC.IO.Unsafe (unsafePerformIO)
 import GHC.TypeLits (KnownSymbol, symbolVal)
-import Servant.API (Capture, Description, NoContent, QueryFlag, QueryParam', Raw,
+import Servant.API (Capture, Description, NoContent, NoContentVerb, QueryFlag, QueryParam', Raw,
                     ReflectMethod (..), ReqBody, SBoolI, Summary, Verb, (:<|>) (..), (:>))
 import Servant.API.Modifiers (FoldRequired, foldRequiredArgument)
 import Servant.Server (Handler (..), HasServer (..), Server, ServerError (..))
@@ -382,6 +382,15 @@ instance ( HasServer (Verb mt st ct a) ctx
          HasLoggingServer config (Verb (mt :: k) (st :: Nat) (ct :: [Type]) a) ctx where
     routeWithLog =
         inRouteServer @(Verb mt st ct a) route $
+        applyLoggingToHandler (Proxy @config) (Proxy @mt)
+
+instance ( HasServer (NoContentVerb mt) ctx
+         , Reifies config ServantLogConfig
+         , ReflectMethod mt
+         ) =>
+         HasLoggingServer config (NoContentVerb (mt :: k)) ctx where
+    routeWithLog =
+        inRouteServer @(NoContentVerb mt) route $
         applyLoggingToHandler (Proxy @config) (Proxy @mt)
 
 instance HasLoggingServer config Raw ctx where
