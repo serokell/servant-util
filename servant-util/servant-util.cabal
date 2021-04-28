@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: b81f202226a85e97248110a316124552ae47833339db4b64b69b407ecfa3fac2
+-- hash: 3467d7474252809bd865b1d18f4068fc820d199c8f645e0e46b1deb97ddcb1cd
 
 name:           servant-util
 version:        0.1.0
@@ -68,6 +68,7 @@ library
       Servant.Util.Internal.Util
       Servant.Util.Stats
       Servant.Util.Swagger
+      Servant.Util.Util
   other-modules:
       Paths_servant_util
   hs-source-dirs:
