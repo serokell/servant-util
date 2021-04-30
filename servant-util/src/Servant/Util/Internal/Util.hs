@@ -2,6 +2,8 @@
 
 module Servant.Util.Internal.Util
     ( Positive (..)
+    , toPositive
+    , unsafeToPositive
     , IsNotZero
     , KnownPositive
     , positiveVal
@@ -18,7 +20,10 @@ newtype Positive a = PositiveUnsafe { unPositive :: a }
 toPositive :: (Show a, Ord a, Num a) => a -> Either Text (Positive a)
 toPositive a
     | a > 0 = Right $ PositiveUnsafe a
-    | otherwise = Left $ "Value is negative: " <> show a
+    | otherwise = Left $ "Non-positive value: " <> show a
+
+unsafeToPositive :: (Show a, Ord a, Num a, HasCallStack) => a -> Positive a
+unsafeToPositive = either error id . toPositive
 
 type family IsNotZero (k :: Nat) :: Constraint where
     IsNotZero 0 = TypeError ('Text "Null is now allowed here")
