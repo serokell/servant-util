@@ -78,37 +78,47 @@ For example, `GetBooks` from the example above can be extended as
 ```haskell
 
 type GetBooks
-    :> SortingParams ["isbn" ?: Isbn, "name" ?: Text]
+    :> SortingParams
+         ["isbn" ?: Isbn, "name" ?: Text, "author" ?: Text]
+        '["isbn" ?: 'Asc Isbn]
     =  Get '[JSON] [Book]
 
 ```
 
-List required by `SortingParams` combinator should consist of fields which are allowed to participate
-in sorting.
+The first list required by `SortingParams` combinator should consist of fields that
+are allowed to participate in sorting.
 The first argument of `?:` operator stands for a field name from front-end's point
 of view; the second argument corresponds to field type and used primarily to avoid
 mistakes in implementation.
 
 (Soon it will also be used to distinguish between nullable and mandatory fields.)
 
+The second list required by `SortingParams` stands for the base sorting that will
+always be applied last disregard the user's input. It allows for more
+deterministic results, and is in fact essential when paired with pagination.
+
 Examples of valid requests to this server (using [httpie](https://httpie.org/)):
-* `http :8090/books sortBy=='asc(name)'`
-* `http :8090/books sortBy=='asc(name),desc(isbn)'`
-* `http :8090/books sortBy==+name,-isbn'`
+* `http :8090/books sortBy=='asc(name)'` — sort alphabetically by `name` (for equal names — by `isbn`);
+* `http :8090/books sortBy=='asc(name),desc(author)'` — sort alphabetically by `name`, for equal names — by `author` in reversed order (and for entries with the same name and author - by `isbn`).
+* `http :8090/books sortBy==+name,-author'` — same as above.
 
 Server handler will be supplied with `SortingSpec` argument, use neighbor `servant-util-*`
 packages for applying this specification to your backend.
+You can also use methods from `Servant.Util.Dummy` for a trivial in-Haskell
+implementation, may be used to implement a server prototype.
 
-Since a list of fields which can participate in sorting is usually determined by response
-type, you can extract it to instance of the dedicated type family helper:
+Since a list of fields that can participate in sorting is usually determined by response
+type, you can extract it to an instance of the dedicated type family helper:
 
 ```haskell
 
-type instance SortingParamTypesOf Book =
-    ["isbn" ?: Isbn, "name" ?: Text]
+type instance SortingParamBaseOf Book =
+    ["name" ?: Isbn, "author" ?: Text]
+type instance SortingParamProvidedOf Book =
+    ["isbn" ?: Asc Isbn]
 
 type GetBooks
-    :> SortingParamsOf Book  -- same as `SortingParams (SortingParamTypesOf Book)`
+    :> SortingParamsOf Book  -- same as the definition at the section's top
     =  Get '[JSON] [Book]
 
 ```

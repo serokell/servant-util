@@ -17,14 +17,15 @@ import Servant.Util.Common
 
 instance ( HasLoggingServer config subApi ctx
          , HasContextEntry (ctx .++ DefaultErrorFormatters) ErrorFormatters
-         , ReifyParamsNames params
+         , ReifySortingItems base
+         , ReifyParamsNames provided
          ) =>
-         HasLoggingServer config (SortingParams params :> subApi) ctx where
+         HasLoggingServer config (SortingParams provided base :> subApi) ctx where
     routeWithLog =
-        inRouteServer @(SortingParams params :> LoggingApiRec config subApi) route $
-        \(paramsInfo, handler) sorting@(SortingSpec params) ->
+        inRouteServer @(SortingParams provided base :> LoggingApiRec config subApi) route $
+        \(paramsInfo, handler) sorting@(SortingSpec provided) ->
             let paramLog
-                  | null params = "no sorting"
+                  | null provided = "no sorting"
                   | otherwise = fmt . mconcat $
-                                "sorting: " : L.intersperse " " (map build params)
+                                "sorting: " : L.intersperse " " (map build provided)
             in (addParamLogInfo paramLog paramsInfo, handler sorting)

@@ -14,8 +14,10 @@ We will demonstrate this on the [previously shown example](/servant-util/README.
 
 ```haskell
 
-type instance SortingParamTypesOf Book =
-    ["isbn" ?: Word64, "name" ?: Text]
+type instance SortingParamBaseOf Book =
+    ["name" ?: Isbn, "author" ?: Text]
+type instance SortingParamProvidedOf Book =
+    ["isbn" ?: Asc Isbn]
 
 type GetBooks
     :> SortingParamsOf Book
@@ -41,20 +43,22 @@ Implementation will look like
 ```haskell
 
 import Servant.Util (SortingSpecOf, HNil, (.*.))
-import Servant.Util.Beam.Postgres (bySpec_, fieldSort_)
+import Servant.Util.Beam.Postgres (fieldSort)
 
 -- some code
 
 getBooks :: _ => SortingSpecOf Book -> m [Book]
 getBooks sorting =
     runSelect . select $
-        orderBy_ (bySpec_ sorting . sortingApp) $
+        sortBy_ sorting sortingApp $
         all_ (books booksSchema)
   where
     sortingApp Book{..} =
-        fieldSort_ @"isbn" isbn .*.
-        fieldSort_ @"name" bookName .*.
+        fieldSort @"name" bookName .*.
+        fieldSort @"author" author .*.
+        fieldSort @"isbn" isbn .*.
         HNil
+
 ```
 
 Function `sortingApp` specifies how to correlate user-provided specification with fields
@@ -65,7 +69,7 @@ If one of the fields lacks such specification in `sortingApp` definition or orde
 fields is incorrect then compile error is raised. The same happens when field types in API
 and schema definition mismatch.
 
-Annotating `fieldSort_` calls with a field name is fully optional but may save you in case
+Annotating `fieldSort` calls with a field name is fully optional but may save you in case
 when several fields of the same type participate in sorting.
 
 ### Filtering

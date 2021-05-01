@@ -19,7 +19,7 @@ import Servant.Util.Combinators.Sorting.Base
 import Servant.Util.Common
 
 
--- | Ensure no name in entires repeat.
+-- | Ensure no name in entries repeat.
 sortingCheckDuplicates :: [SortingItem] -> Either Text ()
 sortingCheckDuplicates items =
     let names = map siName items
@@ -29,14 +29,15 @@ sortingCheckDuplicates items =
 -- | Consumes "sortBy" query parameter and fetches sorting parameters contained in it.
 instance ( HasServer subApi ctx
          , HasContextEntry (ctx .++ DefaultErrorFormatters) ErrorFormatters
-         , ReifyParamsNames params
+         , ReifySortingItems base
+         , ReifyParamsNames provided
          ) =>
-         HasServer (SortingParams params :> subApi) ctx where
-    type ServerT (SortingParams params :> subApi) m =
-        SortingSpec params -> ServerT subApi m
+         HasServer (SortingParams provided base :> subApi) ctx where
+    type ServerT (SortingParams provided base :> subApi) m =
+        SortingSpec provided base -> ServerT subApi m
 
     route =
-        inRouteServer @(SortParamsExpanded params subApi) route $
+        inRouteServer @(SortParamsExpanded provided subApi) route $
         \handler rawSortItems -> handler (SortingSpec $ fmap unTagged rawSortItems ?: [])
 
     hoistServerWithContext _ pc nt s =

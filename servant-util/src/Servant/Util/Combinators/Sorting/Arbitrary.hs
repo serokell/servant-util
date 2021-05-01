@@ -14,11 +14,12 @@ import Servant.Util.Common
 instance Arbitrary SortingOrder where
     arbitrary = elements [Ascendant, Descendant]
 
-instance ReifyParamsNames params => Arbitrary (SortingSpec params) where
+instance (ReifySortingItems base, ReifyParamsNames provided) =>
+         Arbitrary (SortingSpec provided base) where
     arbitrary = do
-        let names = toList $ reifyParamsNames @params
+        let names = toList $ reifyParamsNames @provided
         someNames <- sublistOf =<< shuffle names
         orders <- infiniteList
         let sortItems = zipWith SortingItem someNames orders
         return (SortingSpec sortItems)
-    shrink = map SortingSpec . reverse . inits . unSortingSpec
+    shrink SortingSpec{..} = map SortingSpec . reverse $ inits ssProvided

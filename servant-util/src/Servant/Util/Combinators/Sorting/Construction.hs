@@ -11,8 +11,7 @@ module Servant.Util.Combinators.Sorting.Construction
 import Universum
 
 import Data.Default (Default (..))
-import GHC.Exts (IsList, fromList)
-import qualified GHC.Exts
+import GHC.Exts (IsList (..))
 import GHC.TypeLits (ErrorMessage (..), KnownSymbol, Symbol, TypeError)
 
 import Servant.Util.Combinators.Sorting.Base
@@ -20,28 +19,28 @@ import Servant.Util.Common
 
 
 -- | Helper for defining custom 'SortingSpec's,
--- contains 'SortingItem' corresponding to one of parameter in @params@.
-newtype SortingRequestItem (params :: [TyNamedParam *]) = SortingRequestItem
+-- contains 'SortingItem' corresponding to one of parameter in @provided@ list.
+newtype SortingRequestItem (provided :: [TyNamedParam *]) = SortingRequestItem
     { unSortingRequestItem :: SortingItem
     } deriving (Show)
 
 type family KnownTypeName
-    (origParams :: [TyNamedParam *])
+    (origProvided :: [TyNamedParam *])
     (name :: Symbol)
-    (params :: [TyNamedParam *])
+    (provided :: [TyNamedParam *])
         :: Constraint where
     KnownTypeName orig name '[] =
         TypeError ('Text "Parameter " ':<>: 'ShowType name ':<>: 'Text " is not allowed here"
                    ':$$: 'Text "Available fields to sort on: " ':<>:
                          'ShowType (TyNamedParamsNames orig))
     KnownTypeName _ name ('TyNamedParam name _ ': _) = (KnownSymbol name)
-    KnownTypeName orig name ('TyNamedParam name0 _ ': params) = KnownTypeName orig name params
+    KnownTypeName orig name ('TyNamedParam name0 _ ': provided) = KnownTypeName orig name provided
 
 -- | Ascendant sorting on a field with given name.
 asc
-    :: forall name params.
-       (KnownSymbol name, KnownTypeName params name params)
-    => NameLabel name -> SortingRequestItem params
+    :: forall name provided.
+       (KnownSymbol name, KnownTypeName provided name provided)
+    => NameLabel name -> SortingRequestItem provided
 asc _ = SortingRequestItem SortingItem
       { siName = symbolValT @name
       , siOrder = Ascendant
@@ -49,17 +48,18 @@ asc _ = SortingRequestItem SortingItem
 
 -- | Ascendant sorting on a field with given name.
 desc
-    :: forall name params.
-       (KnownSymbol name, KnownTypeName params name params)
-    => NameLabel name -> SortingRequestItem params
+    :: forall name provided.
+       (KnownSymbol name, KnownTypeName provided name provided)
+    => NameLabel name -> SortingRequestItem provided
 desc _ = SortingRequestItem SortingItem
       { siName = symbolValT @name
       , siOrder = Descendant
       }
 
-instance IsList (SortingSpec params) where
-    type Item (SortingSpec params) = SortingRequestItem params
-    toList = map SortingRequestItem . unSortingSpec
+-- | Instance for 'SortingSpec' construction.
+instance ReifySortingItems base => IsList (SortingSpec provided base) where
+    type Item (SortingSpec provided base) = SortingRequestItem provided
+    toList = map SortingRequestItem . ssProvided
     fromList = SortingSpec . map unSortingRequestItem
 
 {- | Make a sorting specification.
@@ -76,13 +76,15 @@ sortingSpec = mkSortingSpec [asc #id]
 @
 
 -}
-mkSortingSpec :: [SortingRequestItem params] -> SortingSpec params
+mkSortingSpec
+    :: ReifySortingItems base
+    => [SortingRequestItem provided] -> SortingSpec provided base
 mkSortingSpec = fromList
 
 -- | By default 'noSorting' is used.
-instance Default (SortingSpec params) where
+instance ReifySortingItems base => Default (SortingSpec provided base) where
     def = noSorting
 
 -- | Do not specify ordering.
-noSorting :: SortingSpec params
+noSorting :: ReifySortingItems base => SortingSpec provided base
 noSorting = mkSortingSpec []

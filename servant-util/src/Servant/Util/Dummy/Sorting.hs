@@ -65,8 +65,13 @@ instance SortingBackend DummySortingBackend where
 -- | Applies a whole filtering specification to a set of response fields.
 -- Resulting value can be put to 'filter' function.
 sortBySpec
-    :: (ApplyToSortItem backend params, backend ~ DummySortingBackend)
-    => SortingSpec params -> (a -> SortingSpecApp backend params) -> [a] -> [a]
+    :: ( backend ~ DummySortingBackend
+       , allParams ~ AllSortingParams provided base
+       , ApplyToSortItem backend allParams
+       )
+    => SortingSpec provided base
+    -> (a -> SortingSpecApp backend allParams)
+    -> [a] -> [a]
 sortBySpec spec mkApp values =
     map fst . sortOn snd $
     map (id &&& backendApplySorting spec . mkApp) values
