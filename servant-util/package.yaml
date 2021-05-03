@@ -60,7 +60,10 @@ tests:
     build-tools: hspec-discover:hspec-discover
     dependencies:
       - hspec
+      - hspec-expectations
+      - http-client
       - servant-util
       - QuickCheck
+      - warp
 
 <<: *default-extensions
