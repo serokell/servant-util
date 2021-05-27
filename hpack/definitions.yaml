@@ -34,6 +34,7 @@ _definitions:
         - NamedFieldPuns
         - NoImplicitPrelude
         - OverloadedStrings
+        - OverloadedLabels
         - PatternSynonyms
         - RankNTypes
         - RecordWildCards

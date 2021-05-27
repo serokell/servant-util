@@ -13,15 +13,15 @@ import Servant.Util.Combinators.Sorting.Base
 
 
 instance HasClient m subApi =>
-         HasClient m (SortingParams params :> subApi) where
-    type Client m (SortingParams params :> subApi) =
-        SortingSpec params -> Client m subApi
+         HasClient m (SortingParams provided base :> subApi) where
+    type Client m (SortingParams provided base :> subApi) =
+        SortingSpec provided base -> Client m subApi
     clientWithRoute mp _ req (SortingSpec sorting) =
-        clientWithRoute mp (Proxy @(SortParamsExpanded params subApi)) req
+        clientWithRoute mp (Proxy @(SortParamsExpanded provided subApi)) req
             (Just $ Tagged sorting)
     hoistClientMonad mp _ hst subCli = hoistClientMonad mp (Proxy @subApi) hst . subCli
 
-instance ToHttpApiData (TaggedSortingItemsList allowed) where
+instance ToHttpApiData (TaggedSortingItemsList provided) where
     toUrlPiece (Tagged sorting) =
         T.intercalate "," $ sorting <&> \SortingItem{..} ->
              let order = case siOrder of

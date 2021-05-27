@@ -63,8 +63,8 @@ sortingSpecApp =
 Annotating 'fieldSort' call with parameter name is not mandatory but recommended
 to prevent possible mistakes in 'fieldSort's ordering.
 -}
-type SortingSpecApp backend (params :: [TyNamedParam *]) =
-    HList (SortingApp backend) params
+type SortingSpecApp backend (allParams :: [TyNamedParam *]) =
+    HList (SortingApp backend) allParams
 
 -- | Lookup for appropriate 'SortingApp' in 'SortingSpecApp' and apply it to 'SortingItem'.
 class ApplyToSortItem backend params where
@@ -75,7 +75,7 @@ class ApplyToSortItem backend params where
         -> SortingItem
         -> Maybe (BackendOrdering backend)
 
-instance ApplyToSortItem backend '[]  where
+instance ApplyToSortItem backend '[] where
     applyToSortItem HNil _ = Nothing
 
 instance (KnownSymbol name, ApplyToSortItem backend params) =>
@@ -88,13 +88,15 @@ instance (KnownSymbol name, ApplyToSortItem backend params) =>
 -- | Apply a given 'SortingSpecApp' to a 'SortingSpec' producing a pack of
 -- ordering values which define lexicographical sorting order.
 backendApplySorting
-    :: forall params backend.
-       ApplyToSortItem backend params
-    => SortingSpec params
-    -> SortingSpecApp backend params
+    :: forall provided base allParams backend.
+       ( allParams ~ AllSortingParams provided base
+       , ApplyToSortItem backend allParams
+       )
+    => SortingSpec provided base
+    -> SortingSpecApp backend allParams
     -> [BackendOrdering backend]
 backendApplySorting spec app =
-    unSortingSpec spec <&> \sitem ->
-        applyToSortItem @backend @params app sitem
+    ssAll spec <&> \sitem ->
+        applyToSortItem @backend @allParams app sitem
            -- impossible due to invariants of 'SortingSpec'
         ?: error ("Impossible: don't know how to apply to spec item " <> show sitem)

@@ -3,9 +3,11 @@ module Servant.Util.Combinators.Sorting
     ( -- * General
       SortingParams
     , SortingSpec
+    , SortingOrderType (..)
 
       -- * Shortcuts
-    , SortingParamTypesOf
+    , SortingParamProvidedOf
+    , SortingParamBaseOf
     , SortingParamsOf
     , SortingSpecOf
 
@@ -14,6 +16,7 @@ module Servant.Util.Combinators.Sorting
     , asc, desc
     , mkSortingSpec
     , noSorting
+    , ReifySortingItems
 
       -- * Re-exports
     , type (?:)

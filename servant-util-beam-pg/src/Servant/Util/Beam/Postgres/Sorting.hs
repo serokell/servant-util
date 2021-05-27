@@ -45,13 +45,14 @@ instance (BeamSqlBackend be) =>
 -- | Applies 'orderBy_' according to the given sorting specification.
 sortBy_
     :: ( backend ~ BeamSortingBackend syntax0 s0
-       , ApplyToSortItem backend params
+       , allParams ~ AllSortingParams provided base
+       , ApplyToSortItem backend allParams
        , Projectible be a
        , SqlOrderable be (BackendOrdering backend)
        , ThreadRewritable (QNested s) a
        )
-    => SortingSpec params
-    -> (a -> SortingSpecApp backend params)
+    => SortingSpec provided base
+    -> (a -> SortingSpecApp backend allParams)
     -> Q be db (QNested s) a
     -> Q be db s (WithRewrittenThread (QNested s) s a)
 sortBy_ spec app = orderBy_ (backendApplySorting spec . app)
