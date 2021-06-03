@@ -36,15 +36,14 @@ Example:
 filteringSpec :: FilteringSpec ["id" ?: 'AutoFilter Int, "desc" ?: 'ManualFilter Text]
 filteringSpec = mkFilteringSpec
     [ -- Constructing an auto filter
-    , #id (FilterGT 0)
+    , #id ?/ FilterGT 0
 
-      -- The following three lines are equivalent
-    , #id (FilterMatching 5)
-    , #id $ FilterMatching 5
-    , #id $= 5
+      -- The following two lines are equivalent
+    , #id ?/ FilterMatching 5
+    , #id ?/= 5
 
       -- Constructing a manually implemented filter
-    , #desc "You are my sunshine, my only sunshine"
+    , #desc ?/~ "You are my sunshine, my only sunshine"
     ]
 @
 
