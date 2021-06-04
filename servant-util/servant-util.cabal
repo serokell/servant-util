@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: cd99f8788a70219cab03b6fdc5389e8d71731e9faf921a46971ce32352df7f5c
+-- hash: ffeba425b7afffa4209a7514df9f3357b64a25899490b6a3c946029a755a3f02
 
 name:           servant-util
 version:        0.1.0
@@ -74,7 +74,7 @@ library
   hs-source-dirs:
       src
   default-extensions: AllowAmbiguousTypes BangPatterns ConstraintKinds DataKinds DefaultSignatures DeriveDataTypeable DeriveGeneric EmptyCase FlexibleContexts FlexibleInstances FunctionalDependencies GADTs GeneralizedNewtypeDeriving LambdaCase MultiParamTypeClasses MultiWayIf NamedFieldPuns NoImplicitPrelude OverloadedStrings OverloadedLabels PatternSynonyms RankNTypes RecordWildCards ScopedTypeVariables StandaloneDeriving TemplateHaskell TupleSections TypeFamilies TypeOperators UndecidableInstances ViewPatterns TypeApplications
-  ghc-options: -Wall -Werror
+  ghc-options: -Wall
   build-tool-depends:
       autoexporter:autoexporter
   build-depends:
@@ -91,6 +91,7 @@ library
     , mtl
     , pretty-terminal
     , reflection
+    , regex-posix
     , safe-exceptions
     , servant
     , servant-client
@@ -115,7 +116,7 @@ executable servant-util-examples
   hs-source-dirs:
       examples
   default-extensions: AllowAmbiguousTypes BangPatterns ConstraintKinds DataKinds DefaultSignatures DeriveDataTypeable DeriveGeneric EmptyCase FlexibleContexts FlexibleInstances FunctionalDependencies GADTs GeneralizedNewtypeDeriving LambdaCase MultiParamTypeClasses MultiWayIf NamedFieldPuns NoImplicitPrelude OverloadedStrings OverloadedLabels PatternSynonyms RankNTypes RecordWildCards ScopedTypeVariables StandaloneDeriving TemplateHaskell TupleSections TypeFamilies TypeOperators UndecidableInstances ViewPatterns TypeApplications
-  ghc-options: -Wall -Werror -threaded -rtsopts -with-rtsopts=-N -O2
+  ghc-options: -Wall -threaded -rtsopts -with-rtsopts=-N -O2
   build-depends:
       QuickCheck
     , aeson
@@ -130,6 +131,7 @@ executable servant-util-examples
     , mtl
     , pretty-terminal
     , reflection
+    , regex-posix
     , safe-exceptions
     , servant
     , servant-client
@@ -155,6 +157,7 @@ test-suite servant-util-test
   other-modules:
       Spec
       Test.Servant.Filtering.GeneralSpec
+      Test.Servant.Filtering.ImplSpec
       Test.Servant.Filtering.LikeSpec
       Test.Servant.Helpers
       Test.Servant.Sorting.ImplSpec
@@ -162,7 +165,7 @@ test-suite servant-util-test
   hs-source-dirs:
       tests
   default-extensions: AllowAmbiguousTypes BangPatterns ConstraintKinds DataKinds DefaultSignatures DeriveDataTypeable DeriveGeneric EmptyCase FlexibleContexts FlexibleInstances FunctionalDependencies GADTs GeneralizedNewtypeDeriving LambdaCase MultiParamTypeClasses MultiWayIf NamedFieldPuns NoImplicitPrelude OverloadedStrings OverloadedLabels PatternSynonyms RankNTypes RecordWildCards ScopedTypeVariables StandaloneDeriving TemplateHaskell TupleSections TypeFamilies TypeOperators UndecidableInstances ViewPatterns TypeApplications
-  ghc-options: -Wall -Werror -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -Wall -threaded -rtsopts -with-rtsopts=-N
   build-tool-depends:
       hspec-discover:hspec-discover
   build-depends:
@@ -182,6 +185,7 @@ test-suite servant-util-test
     , mtl
     , pretty-terminal
     , reflection
+    , regex-posix
     , safe-exceptions
     , servant
     , servant-client

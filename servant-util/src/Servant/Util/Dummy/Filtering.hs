@@ -37,6 +37,10 @@ module Servant.Util.Dummy.Filtering
 
 import Universum
 
+import Data.Bits ((.|.))
+import qualified Text.Regex.Posix as R
+import qualified Text.Regex.Posix.String as RS
+
 import Servant.Util.Combinators.Filtering.Backend
 import Servant.Util.Combinators.Filtering.Base
 import Servant.Util.Combinators.Filtering.Filters
@@ -60,6 +64,23 @@ instance Ord a => AutoFilterSupport DummyFilteringBackend FilterComparing a wher
         FilterLT v  -> (< v)
         FilterGTE v -> (>= v)
         FilterLTE v -> (<= v)
+
+-- | Supported only for trivial cases yet.
+instance ToString s => AutoFilterSupport DummyFilteringBackend FilterLike s where
+    autoFilterSupport
+      (FilterLike (CaseSensitivity cs) (LikePatternUnsafe (toString -> pat))) =
+      \(toString -> txt) -> isJust @() $ do
+        let compOpts = RS.compBlank
+                & if cs then id else (.|. RS.compIgnoreCase)
+        -- TODO: report this to servant parser
+        regex <- R.makeRegexOptsM compOpts RS.execBlank (transformPat pat)
+        R.matchM regex txt
+      where
+        transformPat s = '^' : replacePatChars s ++ "$"
+        replacePatChars = \case
+          []      -> []
+          '*' : s -> '.' : '*' : replacePatChars s
+          c : s   -> c : replacePatChars s
 
 -- | Applies a whole filtering specification to a set of response fields.
 -- Resulting value can be put to 'filter' function.

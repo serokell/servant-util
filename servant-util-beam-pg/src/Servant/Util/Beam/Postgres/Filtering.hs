@@ -125,10 +125,12 @@ instance ( IsString text
          ) =>
          AutoFilterSupport (QExprFilterBackend be s) FilterLike text where
     autoFilterSupport = \case
-        FilterLike _cs pat ->
+        FilterLike (CaseSensitivity True) pat ->
             let sqlPat = fromString $ likeToSqlPattern pat
             in (`like_` val_ sqlPat)
-      where
+        FilterLike (CaseSensitivity False) _ ->
+            -- TODO: allow disabling this at parsing stage
+            error "Case-insensitive filters are not supported by this backend."
 
 -- | Applies a whole filtering specification to a set of response fields.
 -- Resulting value can be put to 'guard_' or 'filter_' function.

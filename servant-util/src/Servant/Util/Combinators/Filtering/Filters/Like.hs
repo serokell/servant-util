@@ -2,9 +2,12 @@
 
 module Servant.Util.Combinators.Filtering.Filters.Like
     ( pattern Esc
+    , CaseSensitivity (..)
     , mkLikePattern
     , LikePattern (..)
     , FilterLike (..)
+    , mkLikePatternUnsafe
+    , filterContains
     ) where
 
 import Universum
@@ -27,7 +30,7 @@ instance Buildable CaseSensitivity where
 
 -- | Simple regexp pattern, @.@ and @*@ signed will be considered.
 -- Escaping is performed via prefixing with backslash.
-data LikePattern = LikePatternUnsafe
+newtype LikePattern = LikePatternUnsafe
     { unLikePattern :: LText
     }
 
@@ -52,6 +55,9 @@ mkLikePattern txt = do
         _ : r         -> valid r
         []            -> True
 
+mkLikePatternUnsafe :: LText -> LikePattern
+mkLikePatternUnsafe = either error id . mkLikePattern
+
 instance IsString LikePattern where
     fromString = either error id . mkLikePattern . fromString
 
@@ -65,15 +71,27 @@ data FilterLike a
     = FilterLike CaseSensitivity LikePattern
     deriving (Functor)
 
+-- | Construct a filter that matches when text contains given substring.
+filterContains :: CaseSensitivity -> Text -> FilterLike a
+filterContains cs pat =
+    FilterLike cs (LikePatternUnsafe $ asContains $ LT.fromStrict pat)
+  where
+    asContains t = t
+        & LT.replace "." (escapedChar '.')
+        & LT.replace "*" (escapedChar '*')
+        & LT.replace (LT.singleton Esc) (escapedChar Esc)
+        & LT.cons '*'
+        & flip LT.snoc '*'
+
 instance BuildableAutoFilter FilterLike where
     buildAutoFilter name = \case
         FilterLike cs f -> build name <> " " <> build f <> " " <> build cs
 
 instance IsAutoFilter FilterLike where
     autoFilterEnglishOpsNames =
-        [ ("like", "like pattern match")
-        , ("ilike", "case-insensitive like pattern match")
-        , ("contains", "contains text")
+        [ ("like", "regex match (`.` for any char, `*` for any substring)")
+        , ("ilike", "case-insensitive regex")
+        , ("contains", "contains text, requires no escaping")
         , ("icontains", "case-insensitive 'contains text'")
         ]
 
@@ -82,30 +100,19 @@ instance IsAutoFilter FilterLike where
           , FilterLike (CaseSensitivity True) <$> parseLikePattern
           )
         , ( "ilike"
-          , FilterLike (CaseSensitivity False) <$> unsupportedFilteringValue
-              "Case-insensitive filters are not supported by this backend."
+          , FilterLike (CaseSensitivity False) <$> parseLikePattern
           )
         , ( "contains"
-          , FilterLike (CaseSensitivity True) <$> containsPattern
+          , filterContains (CaseSensitivity True) <$> parseFilteringValueAsIs
           )
         , ( "icontains"
-          , FilterLike (CaseSensitivity False) <$> unsupportedFilteringValue
-              "Case-insensitive filters are not supported by this backend."
+          , filterContains (CaseSensitivity False) <$> parseFilteringValueAsIs
           )
         ]
       where
         parseLikePattern = FilteringValueParser $ \t -> do
             pat <- parseUrlPiece t
             mkLikePattern pat
-
-        containsPattern = do
-            LikePatternUnsafe . asContains <$> parseFilteringValueAsIs
-        asContains t = t
-            & LT.replace "." (escapedChar '.')
-            & LT.replace "*" (escapedChar '*')
-            & LT.replace (LT.singleton Esc) (escapedChar Esc)
-            & LT.cons '*'
-            & flip LT.snoc '*'
 
     autoFilterEncode = \case
         FilterLike cs (unLikePattern -> pat)

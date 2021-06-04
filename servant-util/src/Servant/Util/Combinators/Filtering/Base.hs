@@ -36,6 +36,7 @@ import Data.Typeable (cast)
 import Fmt (Buildable (..), Builder)
 import GHC.Exts (IsList)
 import Servant (FromHttpApiData (..), ToHttpApiData (..))
+import Servant.API (NoContent)
 
 import Servant.Util.Common
 
@@ -200,3 +201,5 @@ type FilteringParamsOf a = FilteringParams (FilteringParamTypesOf a)
 
 -- | This you will most probably want to specify in an endpoint implementation.
 type FilteringSpecOf a = FilteringSpec (FilteringParamTypesOf a)
+
+type instance FilteringParamTypesOf NoContent = '[]
