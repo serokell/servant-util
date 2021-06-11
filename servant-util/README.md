@@ -2,13 +2,13 @@
 
 This package contains the core primitives which directly participate in API and some common utilities.
 
-## Build Instructions [↑](#-patak)
+## Build Instructions
 
 Run `stack build servant-util` to build everything.
 
-## Usage [↑](#-patak)
+## Usage
 
-For the following examples we consider a simple server with two endpoints.
+For the following examples, we consider a simple server with two endpoints.
 
 ```haskell
 
@@ -50,7 +50,7 @@ type BooksAPI = "books" :> (
   )
 
 booksHandlers :: Server BooksAPI
-booksHandlers = -- error "To be implemented"
+booksHandlers =
     (return [])
     :<|>
     (\_ book -> return (isbn book))
@@ -69,9 +69,9 @@ serveBooksServer =
 
 ### Sorting
 
-When an endpoint is extended with `SortingParams` combinator it starts to accept a sorting
-specification in `sortBy` query parameter. This way the user can supply a sequence of fields
-from the set of allowed fields, they will be applied in lexicographical sorting.
+When an endpoint is extended with a `SortingParams` combinator, it starts to accept a sorting
+specification in `sortBy` query parameter. This way, the user can supply a sequence of fields
+from the set of allowed fields. They will be applied lexicographically in the specified order.
 
 For example, `GetBooks` from the example above can be extended as
 
@@ -88,27 +88,43 @@ type GetBooks
 The first list required by `SortingParams` combinator should consist of fields that
 are allowed to participate in sorting.
 The first argument of `?:` operator stands for a field name from front-end's point
-of view; the second argument corresponds to field type and used primarily to avoid
-mistakes in implementation.
+of view; the second argument corresponds to the field type and used primarily to avoid
+mistakes in the implementation.
 
-(Soon it will also be used to distinguish between nullable and mandatory fields.)
+(Soon, it will also be used to distinguish between nullable and mandatory fields.)
 
 The second list required by `SortingParams` stands for the base sorting that will
 always be applied last disregard the user's input. It allows for more
-deterministic results, and is in fact essential when paired with pagination.
+deterministic results and is, in fact, essential when paired with pagination.
 
 Examples of valid requests to this server (using [httpie](https://httpie.org/)):
 * `http :8090/books sortBy=='asc(name)'` — sort alphabetically by `name` (for equal names — by `isbn`);
 * `http :8090/books sortBy=='asc(name),desc(author)'` — sort alphabetically by `name`, for equal names — by `author` in reversed order (and for entries with the same name and author - by `isbn`).
 * `http :8090/books sortBy==+name,-author'` — same as above.
 
-Server handler will be supplied with `SortingSpec` argument, use neighbor `servant-util-*`
+The server handler will be supplied with `SortingSpec` argument, use neighbor `servant-util-*`
 packages for applying this specification to your backend.
-You can also use methods from `Servant.Util.Dummy` for a trivial in-Haskell
-implementation, may be used to implement a server prototype.
 
-Since a list of fields that can participate in sorting is usually determined by response
-type, you can extract it to an instance of the dedicated type family helper:
+You can also use methods from [`Servant.Util.Dummy`](src/Servant/Util/Dummy.hs) for a trivial in-Haskell
+implementation, suitable for a server prototype:
+
+```haskell
+
+import Servant.Util.Dummy (sortBySpec, fieldSort)
+
+getBooks :: ToServer GetBooks
+getBooks sortingSpec = do
+    let
+      -- Correlate user input with fields of our response type
+      sortingApp Book{..} =
+          fieldSort @"name" bookName .*.
+          fieldSort @"author" author .*.
+          HNil
+    sortBySpec sortingSpec sortingApp <$> allBooks
+```
+
+Since a list of fields that can participate in sorting is usually determined by the response
+type, you can extract this fields list to an instance of the dedicated type family helper:
 
 ```haskell
 
@@ -122,6 +138,10 @@ type GetBooks
     =  Get '[JSON] [Book]
 
 ```
+
+In case you need to construct a `SortingSpec` manually (for instance, to pass to a client handler),
+take a look at [`Servant.Util.Combinators.Sorting.Construction`](src/Servant/Util/Combinators/Sorting/Construction.hs) module.
+
 
 ### Filtering
 
@@ -167,10 +187,10 @@ On the frontend side the following query parameters will be allowed:
 * `isbn[in]=[12345,23456]` - any value from the given list matches.
 * `isbn[gt]=12345` - higher values are allowed.
 * `isbn[lte]=12345` - the opposite to the previous predicate.
-* `name[lte]=12345` - the opposite to the previous predicate.
+* `name[gte]=D&name[lt]=E` - everything starting with latter `D`.
 
-Now let's suppose you need to support on your server backend a much more complex
-predicate, for instance, book name is longer than 10 characters. You can either define
+Now let's suppose you need your server backend to support a much more complex
+predicate: for instance, the book's name is longer than `10` characters. You can either define
 your own filter or use a manual one; let's demonstrate the latter case:
 
 ```haskell
@@ -182,18 +202,37 @@ type GetBooks
 ```
 
 This way user can supply only `hasLongName=false` or `hasLongName=true` query parameter,
-but filter implementation can be arbitrarily complex (see other packages for example).
+but the filter implementation can be arbitrarily complex.
+
+In case we put `FilteringParams` with all the fields mentioned above into our `GET` method,
+a dummy implementation of its handler may look like:
+
+```haskell
+
+getBooks :: ToServer GetBooks
+getBooks filterSpec = do
+    let
+      filterApp Book{..} =
+        filterOn @"isbn" isbn .*.  -- automatic fields require only the field
+        filterOn @"name" bookName .*.
+        manualFilter @"hasLongName"  -- manual filter requires a predicate
+            (\needLongName -> (length bookName >= 10) == needLongName) .*.
+        HNil
+
+    filterBySpec filterSpec filterApp <$> getAllBooks
+
+```
 
 If for any reason you need to construct a `FilteringSpec` manually, take a look at
-`Servant.Util.Combinators.Filtering.Construction` module.
+[`Servant.Util.Combinators.Filtering.Construction`](src/Servant/Util/Combinators/Filtering/Construction.hs) module.
 
 ### Pagination
 
-Pagination is applied via `PaginationParams` combinator. It accepts a settings type argument,
-which is currently just `DefPageSize n` type; this is required in order for default page
-size to be reflected in documentation.
+Pagination is applied via `PaginationParams` combinator. It accepts a `settings` type argument,
+which is currently just either `'DefPageSize n` or `'DefUnlimitedPageSize` that define
+the default page size (defined statically in order to be reflected in documentation).
 
-Endpoint supplied with this combinator starts to accept `offset` and `limit` query
+An endpoint supplied with this combinator starts accepting `offset` and `limit` query
 parameters, both are optional.
 
 Your endpoint implementation will be given a `PaginationSpec` object which can be applied
@@ -205,10 +244,10 @@ import Servant.Util (PaginationParams, PaginationSpec)
 import Servant.Util.Dummy (paginate)
 
 type GetBooks
-    :> PaginationParams (DefPageSize 10)
+    :> PaginationParams
     =  Get '[JSON] [Book]
 
-getBooks :: _ => PaginationSpec -> m [Books]
+getBooks :: ToServer GetBooks
 getBooks pagination = paginate pagination <$> getAllBooks
 
 ```
@@ -262,7 +301,7 @@ serveBooksServer =
 
 ```
 
-This will wrap your API into internal `LoggingAPI` combinator, resulting API `Proxy`
+This will wrap your API into an internal `LoggingAPI` combinator, resulting API `Proxy`
 should be passed to `serve` method; meanwhile, handlers remain unchanged.
 
 You will also need to provide `Buildable` instances for all request parameters:
@@ -314,11 +353,11 @@ POST Request #1
 
 ```
 
-## For Contributors [↑](#-patak)
+## For Contributors
 
 Please see [CONTRIBUTING.md](/.github/CONTRIBUTING.md) for more information.
 
-## About Serokell [↑](#-patak)
+## About Serokell
 
 Servant-util is maintained and funded with :heart: by [Serokell](https://serokell.io/). The names and logo for Serokell are trademark of Serokell OÜ.
 

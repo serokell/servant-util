@@ -54,7 +54,6 @@ _definitions:
 
     - &ghc-options
         - -Wall
-        - -Werror
 
   _utils:
     - &lib-common

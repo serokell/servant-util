@@ -25,6 +25,7 @@ import Data.List (nubBy)
 import Fmt (Buildable (..))
 import GHC.TypeLits (KnownSymbol)
 import Servant (QueryParam, (:>))
+import Servant.API (NoContent)
 import Servant.Server (Tagged (..))
 import Servant.Util.Common
 import qualified Text.Show
@@ -217,3 +218,6 @@ type SortingParamsOf a = SortingParams (SortingParamProvidedOf a) (SortingParamB
 
 -- | This you will most probably want to specify in an endpoint implementation.
 type SortingSpecOf a = SortingSpec (SortingParamProvidedOf a) (SortingParamBaseOf a)
+
+type instance SortingParamBaseOf NoContent = '[]
+type instance SortingParamProvidedOf NoContent = '[]

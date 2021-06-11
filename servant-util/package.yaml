@@ -30,6 +30,7 @@ dependencies:
 - text-format
 - time
 - reflection
+- regex-posix
 - QuickCheck
 - universum
 - QuickCheck

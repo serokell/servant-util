@@ -14,6 +14,10 @@ module Servant.Util.Combinators.Filtering.Construction
     , (?/<=)
     , (?/>=)
     , (?/~)
+    , textLike
+    , textILike
+    , textContains
+    , textIContains
     ) where
 
 import Universum hiding (filter)
@@ -36,15 +40,14 @@ Example:
 filteringSpec :: FilteringSpec ["id" ?: 'AutoFilter Int, "desc" ?: 'ManualFilter Text]
 filteringSpec = mkFilteringSpec
     [ -- Constructing an auto filter
-    , #id (FilterGT 0)
+    , #id ?/ FilterGT 0
 
-      -- The following three lines are equivalent
-    , #id (FilterMatching 5)
-    , #id $ FilterMatching 5
-    , #id $= 5
+      -- The following two lines are equivalent
+    , #id ?/ FilterMatching 5
+    , #id ?/= 5
 
       -- Constructing a manually implemented filter
-    , #desc "You are my sunshine, my only sunshine"
+    , #desc ?/~ "You are my sunshine, my only sunshine"
     ]
 @
 
@@ -139,6 +142,39 @@ infixr 0 ?/>
 infixr 0 ?/<
 infixr 0 ?/>=
 infixr 0 ?/<=
+
+-- | Make a simple POSIX regex filter.
+textLike
+    :: forall name params text.
+       (MkSomeFilter name (FilterLike text) params params, HasCallStack)
+    => NameLabel name -> LText -> SomeFilter params
+l `textLike` p = l ?/ FilterLike @text (CaseSensitivity True) (mkLikePatternUnsafe p)
+infixr 0 `textLike`
+
+-- | Make a simple POSIX regex case-insensitive filter.
+textILike
+    :: forall name params text.
+       (MkSomeFilter name (FilterLike text) params params, HasCallStack)
+    => NameLabel name -> LText -> SomeFilter params
+l `textILike` p = l ?/ FilterLike @text (CaseSensitivity False) (mkLikePatternUnsafe p)
+infixr 0 `textILike`
+
+-- | Make a filter that checks whether the given text is included.
+textContains
+    :: forall name params text.
+       MkSomeFilter name (FilterLike text) params params
+    => NameLabel name -> Text -> SomeFilter params
+l `textContains` p = l ?/ filterContains @text (CaseSensitivity True) p
+infixr 0 `textContains`
+
+-- | Make a filter that checks whether the given text is included,
+-- case-insensitive.
+textIContains
+    :: forall name params text.
+       MkSomeFilter name (FilterLike text) params params
+    => NameLabel name -> Text -> SomeFilter params
+l `textIContains` p = l ?/ filterContains @text (CaseSensitivity False) p
+infixr 0 `textIContains`
 
 -- | Construct a (manual) filter from a value with the same representation as expected one.
 -- Helpful when newtypes are heavely used in API parameters.

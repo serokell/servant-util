@@ -1,10 +1,13 @@
 -- | Provides pagination API combinator.
 module Servant.Util.Combinators.Pagination
     ( PaginationParams
+    , PaginationPageSize (..)
+    , KnownPaginationPageSize
     , PaginationSpec (..)
-    , fullContent
+    , defPageSize
     , itemsOnPage
     , skipping
+    , fullContent
     ) where
 
 import Universum
@@ -31,16 +34,32 @@ import Servant.Util.Internal.Util
 --
 -- Your endpoint implementation will be provided with 'PaginationSpec' variable
 -- which will contain parameters provided by the user.
-data PaginationParams
+data PaginationParams (settings :: PaginationPageSize)
+
+-- | Determines the page size used when client leaves it unspecified.
+data PaginationPageSize
+    -- | Use specified default.
+    = DefPageSize Nat
+    -- | Display all contents.
+    | DefUnlimitedPageSize
 
 -- | Contains pagination parameters provided by the user.
--- 'psLimit' field cannot be limit.
 data PaginationSpec = PaginationSpec
     { psOffset :: Natural
       -- ^ How many elements to skip.
     , psLimit  :: Maybe (Positive Natural)
-      -- ^ Maximum number of elements to remain.
+      -- ^ Maximum number of elements to leave.
+      -- 'Nothing' stands for infinity.
     }
+
+class KnownPaginationPageSize (settings :: PaginationPageSize) where
+  settingDefPageSize :: Maybe (Positive Natural)
+
+instance KnownPositive pageSize => KnownPaginationPageSize ('DefPageSize pageSize) where
+  settingDefPageSize = Just (positiveVal @pageSize)
+
+instance KnownPaginationPageSize 'DefUnlimitedPageSize where
+  settingDefPageSize = Nothing
 
 -- | How servant sees 'PaginationParams' under the hood.
 type PaginationParamsExpanded subApi =
@@ -50,8 +69,9 @@ type PaginationParamsExpanded subApi =
 
 instance ( HasServer subApi ctx
          , HasContextEntry (ctx .++ DefaultErrorFormatters) ErrorFormatters
-         ) => HasServer (PaginationParams :> subApi) ctx where
-    type ServerT (PaginationParams :> subApi) m =
+         , KnownPaginationPageSize settings
+         ) => HasServer (PaginationParams settings :> subApi) ctx where
+    type ServerT (PaginationParams settings :> subApi) m =
         PaginationSpec -> ServerT subApi m
 
     route =
@@ -59,7 +79,7 @@ instance ( HasServer subApi ctx
         \handler offset limit ->
             handler PaginationSpec
             { psOffset = offset ?: 0
-            , psLimit = limit
+            , psLimit = limit <|> settingDefPageSize @settings
             }
 
     hoistServerWithContext _ pc nt s =
@@ -67,11 +87,12 @@ instance ( HasServer subApi ctx
 
 instance
   ( HasLoggingServer config subApi ctx
+  , KnownPaginationPageSize settings
   , HasContextEntry (ctx .++ DefaultErrorFormatters) ErrorFormatters
   ) =>
-  HasLoggingServer config (PaginationParams :> subApi) ctx where
+  HasLoggingServer config (PaginationParams settings :> subApi) ctx where
     routeWithLog =
-        inRouteServer @(PaginationParams :> LoggingApiRec config subApi) route $
+        inRouteServer @(PaginationParams settings :> LoggingApiRec config subApi) route $
         \(paramsInfo, handler) pagination@PaginationSpec{..} ->
             let text = merge . catMaybes $
                   [ guard (psOffset > 0) $> ("offset " <> show psOffset)
@@ -85,26 +106,35 @@ instance
             | null ts = "no pagination"
             | otherwise = T.intercalate ", " ts
 
--- | Do not paginate anything.
-fullContent :: PaginationSpec
-fullContent = PaginationSpec{ psOffset = 0, psLimit = Nothing }
+
+-- | Do not paginate anything, use default page size.
+defPageSize :: PaginationSpec
+defPageSize = PaginationSpec{ psOffset = 0, psLimit = Nothing }
 
 -- | Conveient builder for 'PaginationRequest', creates pagination
 -- with zero offset and given limit.
-itemsOnPage :: Positive Natural -> PaginationSpec
-itemsOnPage limit = PaginationSpec{ psOffset = 0, psLimit = Just limit }
+itemsOnPage :: HasCallStack => Natural -> PaginationSpec
+itemsOnPage limit = PaginationSpec
+  { psOffset = 0
+  , psLimit = Just (unsafeToPositive limit)
+  }
 
 -- | Convenient builder for 'PaginationRequest', modifies offset.
 skipping :: Natural -> PaginationSpec -> PaginationSpec
 skipping offset pagination = pagination{ psOffset = offset }
 
+-- | Do not paginate anything.
+fullContent :: PaginationSpec
+fullContent = defPageSize
+{-# DEPRECATED fullContent "Use `defPageSize` instead" #-}
+
 -- | Retains full content.
 instance Default PaginationSpec where
-    def = fullContent
+    def = defPageSize
 
 instance HasClient m subApi =>
-         HasClient m (PaginationParams :> subApi) where
-    type Client m (PaginationParams :> subApi) =
+         HasClient m (PaginationParams settings :> subApi) where
+    type Client m (PaginationParams settings :> subApi) =
         PaginationSpec -> Client m subApi
 
     clientWithRoute mp _ req PaginationSpec{..} =
@@ -114,7 +144,8 @@ instance HasClient m subApi =>
 
     hoistClientMonad pm _ hst subCli = hoistClientMonad pm (Proxy @subApi) hst . subCli
 
-instance HasSwagger api => HasSwagger (PaginationParams :> api) where
+instance (HasSwagger api, KnownPaginationPageSize settings) =>
+         HasSwagger (PaginationParams settings :> api) where
     toSwagger _ = toSwagger (Proxy @api)
         & S.allOperations . S.parameters <>~ [S.Inline offsetParam, S.Inline limitParam]
       where
@@ -122,8 +153,8 @@ instance HasSwagger api => HasSwagger (PaginationParams :> api) where
         limitParam :: S.Param
         offsetParam = mempty
             & S.name .~ "offset"
-            & S.description ?~ "Pagination parameter. How many items to skip from \
-                               \the beginning."
+            & S.description ?~
+                "Pagination parameter. How many items to skip from the beginning."
             & S.required ?~ False
             & S.schema .~ S.ParamOther (mempty
                 & S.in_ .~ S.ParamQuery
@@ -135,7 +166,10 @@ instance HasSwagger api => HasSwagger (PaginationParams :> api) where
 
         limitParam = mempty
             & S.name .~ "limit"
-            & S.description ?~ "Pagination parameter. Maximum number of items to return."
+            & S.description ?~ mconcat
+                [ "Pagination parameter. Maximum number of items to return.\n"
+                , defaultPageSizeDesc
+                ]
             & S.required ?~ False
             & S.schema .~ S.ParamOther (mempty
                 & S.in_ .~ S.ParamQuery
@@ -144,3 +178,7 @@ instance HasSwagger api => HasSwagger (PaginationParams :> api) where
         limitParamSchema = mempty
             & S.type_ ?~ S.SwaggerInteger
             & S.format ?~ "int32"
+            & S.pattern ?~ "^\\d*[1-9]\\d*$"
+        defaultPageSizeDesc = case settingDefPageSize @settings of
+          Nothing -> "By default, no limit will be applied."
+          Just s  -> "Defaults to " <> show (unPositive s) <> "."

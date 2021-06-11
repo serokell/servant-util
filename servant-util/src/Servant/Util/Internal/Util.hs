@@ -11,11 +11,15 @@ module Servant.Util.Internal.Util
 
 import Universum
 
+import Fmt (Buildable (..))
 import GHC.TypeLits (ErrorMessage (..), TypeError)
 import Servant (FromHttpApiData (..), ToHttpApiData (..))
 
 newtype Positive a = PositiveUnsafe { unPositive :: a }
     deriving (Show, Eq, Ord)
+
+instance Buildable x => Buildable (Positive x) where
+    build = build . unPositive
 
 toPositive :: (Show a, Ord a, Num a) => a -> Either Text (Positive a)
 toPositive a

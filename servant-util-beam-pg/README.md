@@ -2,11 +2,11 @@
 
 This package contains backend implementation for API combinators of `servant-util` package via 'beam-postgres'.
 
-## Build Instructions [↑](#-patak)
+## Build Instructions
 
 Run `stack build servant-util-beam-pg` to build everything.
 
-## Usage [↑](#-patak)
+## Usage
 
 ### Sorting
 
@@ -62,7 +62,7 @@ getBooks sorting =
 ```
 
 Function `sortingApp` specifies how to correlate user-provided specification with fields
-of our table. For each field which we allow to sort on we specify a Beam field from the
+of our table. For each field which we allow to sort on, we specify a Beam field from the
 table.
 
 If one of the fields lacks such specification in `sortingApp` definition or order of
@@ -70,7 +70,7 @@ fields is incorrect then compile error is raised. The same happens when field ty
 and schema definition mismatch.
 
 Annotating `fieldSort` calls with a field name is fully optional but may save you in case
-when several fields of the same type participate in sorting.
+when several fields of the same type participate in sorting; this also improves readability.
 
 ### Filtering
 
@@ -109,26 +109,27 @@ getBooks filters =
         filterOn @"isbn" isbn .*.
         filterOn @"name" bookName .*.
         manualFilter @"hasLongName"
-            (\hasLongName -> hasLongName == (length bookName >= 10)) .*.
+            (\hasLongName -> hasLongName ==. (charLength_ bookName >=. 10)) .*.
         HNil
+
 ```
 
-Again, which is possible user-provided filter you have to provide an implementation.
-Automatic filters require only a corresponding field of response, they will apply required
-operation to it themselves. On the other hand, manual filters carry the value which
-user provides, and you provide any predicate on this value which you need.
+Again, for each possible user-provided filter you have to provide an implementation.
+Automatic filters require only a corresponding field of response, they will apply the required
+operation to it themselves. On the other hand, manual filters carry the value that
+user provides, and you implement the predicate on this value.
 
 Again, type annotations in `filterOn` and `manualFilter` calls are optional.
 
 ### Pagination
 
-Pagination can be appled simply with `paginate_` function.
+Pagination can be applied simply with `paginate_` function.
 
-## For Contributors [↑](#-patak)
+## For Contributors
 
 Please see [CONTRIBUTING.md](/.github/CONTRIBUTING.md) for more information.
 
-## About Serokell [↑](#-patak)
+## About Serokell
 
 Servant-util is maintained and funded with :heart: by [Serokell](https://serokell.io/). The names and logo for Serokell are trademark of Serokell OÜ.
 

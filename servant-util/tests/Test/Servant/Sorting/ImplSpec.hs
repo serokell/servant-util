@@ -151,9 +151,9 @@ apiHandlers = ApiMethods
 ---------------------------------------------------------------------------
 
 -- You can try this with ghci
-printFilterSwagger :: IO ()
-printFilterSwagger =
-  writeFile "filter-test-swagger.json" $
+printSortingSwagger :: IO ()
+printSortingSwagger =
+  writeFile "sorting-test-swagger.json" $
     decodeUtf8 . Aeson.encode $
     toSwagger $ Proxy @(ToServantApi ApiMethods)
 
