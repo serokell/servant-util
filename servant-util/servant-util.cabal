@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: ffeba425b7afffa4209a7514df9f3357b64a25899490b6a3c946029a755a3f02
+-- hash: 9b39622564d5dbe44c295602cda018c1db31e30e2643f3713d8dc459084eef2c
 
 name:           servant-util
 version:        0.1.0
@@ -160,6 +160,7 @@ test-suite servant-util-test
       Test.Servant.Filtering.ImplSpec
       Test.Servant.Filtering.LikeSpec
       Test.Servant.Helpers
+      Test.Servant.Pagination.ImplSpec
       Test.Servant.Sorting.ImplSpec
       Paths_servant_util
   hs-source-dirs:

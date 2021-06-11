@@ -123,7 +123,7 @@ Again, type annotations in `filterOn` and `manualFilter` calls are optional.
 
 ### Pagination
 
-Pagination can be appled simply with `paginate_` function.
+Pagination can be applied simply with `paginate_` function.
 
 ## For Contributors
 

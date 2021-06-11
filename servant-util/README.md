@@ -228,11 +228,11 @@ If for any reason you need to construct a `FilteringSpec` manually, take a look 
 
 ### Pagination
 
-Pagination is applied via `PaginationParams` combinator. It accepts a settings type argument,
-which is currently just `DefPageSize n` type; this is required in order for default page
-size to be reflected in documentation.
+Pagination is applied via `PaginationParams` combinator. It accepts a `settings` type argument,
+which is currently just either `'DefPageSize n` or `'DefUnlimitedPageSize` that define
+the default page size (defined statically in order to be reflected in documentation).
 
-Endpoint supplied with this combinator starts to accept `offset` and `limit` query
+An endpoint supplied with this combinator starts accepting `offset` and `limit` query
 parameters, both are optional.
 
 Your endpoint implementation will be given a `PaginationSpec` object which can be applied
@@ -301,7 +301,7 @@ serveBooksServer =
 
 ```
 
-This will wrap your API into internal `LoggingAPI` combinator, resulting API `Proxy`
+This will wrap your API into an internal `LoggingAPI` combinator, resulting API `Proxy`
 should be passed to `serve` method; meanwhile, handlers remain unchanged.
 
 You will also need to provide `Buildable` instances for all request parameters:
