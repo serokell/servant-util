@@ -1,6 +1,6 @@
 # Serokell servant-util
 
-[![Build Status](https://travis-ci.org/serokell/servant-util.svg?branch=master)](https://travis-ci.org/serokell/servant-util)
+[![Build status](https://badge.buildkite.com/c7a689e69e7e580c4c6c3411efc7ee5af28922f1b4d2e83c94.svg?branch=master)](https://buildkite.com/serokell/servant-util)
 
 Servant-util provides common primitives for building backends with [Servant](https://haskell-servant.github.io/) library.
 
