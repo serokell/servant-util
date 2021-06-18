@@ -1,32 +1,52 @@
+{-# LANGUAGE DeriveAnyClass     #-}
+{-# LANGUAGE DerivingStrategies #-}
+
 module Books where
 
 import Universum
 
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Aeson.TH (defaultOptions, deriveJSON)
+import Data.Swagger (Swagger, ToParamSchema, ToSchema)
 import Fmt (Buildable (..), (+|), (|+))
 import qualified Network.Wai.Handler.Warp as Warp
 import Servant (FromHttpApiData, Get, JSON, PostCreated, QueryParam, ReqBody, Server, serve,
                 (:<|>) (..), (:>))
+import Servant.Swagger (toSwagger)
+import Servant.Swagger.UI (SwaggerSchemaUI, swaggerSchemaUIServer)
 
 import Servant.Util
 
 newtype Isbn = Isbn Word64
-    deriving (Eq, Show, ToJSON, FromJSON)
+    deriving stock (Eq, Show, Generic)
+    deriving newtype (ToJSON, FromJSON, ToSchema, ToParamSchema, FromHttpApiData)
+
+type instance SupportedFilters Isbn = '[FilterMatching, FilterComparing]
+
+type instance ParamDescription Isbn = "ISBN of a book"
+type instance ParamDescription Text = "Text"
 
 data Book = Book
     { isbn     :: Isbn
     , bookName :: Text
     , author   :: Text
     }
+  deriving (Generic)
+  deriving anyclass (ToSchema)
 
 deriveJSON defaultOptions 'Book
 
 newtype Password = Password Text
-    deriving (FromHttpApiData)
+  deriving stock (Generic)
+  deriving newtype (FromHttpApiData, ToParamSchema)
 
 type GetBooks
-    = Get '[JSON] [Book]
+    =  SortingParams
+         '["isbn" ?: Isbn, "name" ?: Text, "author" ?: Text]
+         '["isbn" ?: 'Asc Isbn]
+    :> FilteringParams ["isbn" ?: 'AutoFilter Isbn, "name" ?: 'AutoFilter Text]
+    :> PaginationParams ('DefPageSize 20)
+    :> Get '[JSON] [Book]
 
 type AddBook
     =  QueryParam "password" Password
@@ -38,9 +58,12 @@ type BooksAPI = "books" :> (
     AddBook
   )
 
+swagger :: Swagger
+swagger = toSwagger @BooksAPI Proxy
+
 booksHandlers :: Server BooksAPI
 booksHandlers =
-    (return [])
+    (\_sorting _filtering _pagination -> return [])
     :<|>
     (\_ book -> return (isbn book))
 
@@ -74,7 +97,8 @@ instance Buildable (ForResponseLog [Book]) where
 serveBooksServer :: IO ()
 serveBooksServer =
     Warp.runSettings warpSettings $
-    serverWithLogging loggingConfig (Proxy @BooksAPI) $ \sp ->
-    serve sp booksHandlers
+    serverWithLogging loggingConfig (Proxy @BooksAPI) $ \(Proxy :: Proxy api) ->
+    serve @(SwaggerSchemaUI "swagger-ui" "swagger.json" :<|> api) Proxy
+      (swaggerSchemaUIServer swagger :<|> booksHandlers)
   where
     loggingConfig = ServantLogConfig putTextLn
