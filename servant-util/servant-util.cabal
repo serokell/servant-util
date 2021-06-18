@@ -4,18 +4,18 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 9b39622564d5dbe44c295602cda018c1db31e30e2643f3713d8dc459084eef2c
+-- hash: de73541e9d975e3ed0fdec0ca76af4a65ee45c1ba3e85c9dde8b9b02b103cac4
 
 name:           servant-util
-version:        0.1.0
+version:        0.1.0.1
 synopsis:       Servant servers utilities.
-description:    Please see the README on GitHub at <https://github.com/serokell/servant-util#README.md>
-category:       Web
+description:    Basement for common Servant combinators like filtering, sorting, pagination and semantical logging.
+category:       Servant, Web
 homepage:       https://github.com/serokell/servant-util#readme
 bug-reports:    https://github.com/serokell/servant-util/issues
 author:         Serokell
 maintainer:     hi@serokell.io
-copyright:      2019 Serokell OÜ
+copyright:      2019-2021 Serokell OÜ
 license:        MPL-2.0
 build-type:     Simple
 extra-source-files:

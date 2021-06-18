@@ -4,18 +4,17 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 0645c7edec548ae3dfcbeefb861ef1334ec81b456b5d541f226a0d01ae80b771
+-- hash: 6ef1c6ee74da17c3ee697b9d46aa6057bc4cb254cc1119be49523b207df91a35
 
 name:           servant-util-beam-pg
-version:        0.1.0
-synopsis:       Primitives implementation via beam-postgres.
-description:    Please see the README on GitHub at <https://github.com/serokell/servant-util#README.md>
-category:       Web
+version:        0.1.0.1
+synopsis:       Implementation of servant-util primitives for beam-postgres.
+category:       Servant, Web, Database
 homepage:       https://github.com/serokell/servant-util#readme
 bug-reports:    https://github.com/serokell/servant-util/issues
 author:         Serokell
 maintainer:     hi@serokell.io
-copyright:      2019 Serokell OÜ
+copyright:      2019-2021 Serokell OÜ
 license:        MPL-2.0
 build-type:     Simple
 extra-source-files:
