@@ -1,9 +1,10 @@
 <<: !include "../hpack/module.yaml"
 name:                servant-util
-version:             0.1.0
-copyright:           "2019 Serokell OÜ"
+version:             0.1.0.1
 synopsis:            Servant servers utilities.
-category:            Web
+description:
+  Basement for common Servant combinators like filtering, sorting, pagination and semantical logging.
+category:            Servant, Web
 
 dependencies:
 - aeson
