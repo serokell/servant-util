@@ -1,2 +1,9 @@
 -- | Contains dummy backend implementations for introduced combinators.
-{-# OPTIONS_GHC -F -pgmF autoexporter -Wno-dodgy-exports -Wno-unused-imports #-}
+
+module Servant.Util.Dummy
+  ( module M
+  ) where
+
+import Servant.Util.Dummy.Filtering as M
+import Servant.Util.Dummy.Pagination as M
+import Servant.Util.Dummy.Sorting as M

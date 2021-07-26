@@ -40,9 +40,6 @@ dependencies:
 library:
   source-dirs: src
 
-  build-tools:
-    - autoexporter
-
 <<: *ghc-options
 
 executables:
