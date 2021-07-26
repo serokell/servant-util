@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 6ef1c6ee74da17c3ee697b9d46aa6057bc4cb254cc1119be49523b207df91a35
+-- hash: 6dc1197e6121504741430e58f847d8e4248a712c21e73e45b694a5520cfa0e9c
 
 name:           servant-util-beam-pg
 version:        0.1.0.1
@@ -37,8 +37,6 @@ library
       src
   default-extensions: AllowAmbiguousTypes BangPatterns ConstraintKinds DataKinds DefaultSignatures DeriveDataTypeable DeriveGeneric EmptyCase FlexibleContexts FlexibleInstances FunctionalDependencies GADTs GeneralizedNewtypeDeriving LambdaCase MultiParamTypeClasses MultiWayIf NamedFieldPuns NoImplicitPrelude OverloadedStrings OverloadedLabels PatternSynonyms RankNTypes RecordWildCards ScopedTypeVariables StandaloneDeriving TemplateHaskell TupleSections TypeFamilies TypeOperators UndecidableInstances ViewPatterns TypeApplications
   ghc-options: -Wall
-  build-tool-depends:
-      autoexporter:autoexporter
   build-depends:
       base >=4.7 && <5
     , beam-core

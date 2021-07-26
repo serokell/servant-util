@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: de73541e9d975e3ed0fdec0ca76af4a65ee45c1ba3e85c9dde8b9b02b103cac4
+-- hash: f8f98d17af973304515c0305889a12f2f94d992dd126b9dbbb5adc8bc7767cdc
 
 name:           servant-util
 version:        0.1.0.1
@@ -75,8 +75,6 @@ library
       src
   default-extensions: AllowAmbiguousTypes BangPatterns ConstraintKinds DataKinds DefaultSignatures DeriveDataTypeable DeriveGeneric EmptyCase FlexibleContexts FlexibleInstances FunctionalDependencies GADTs GeneralizedNewtypeDeriving LambdaCase MultiParamTypeClasses MultiWayIf NamedFieldPuns NoImplicitPrelude OverloadedStrings OverloadedLabels PatternSynonyms RankNTypes RecordWildCards ScopedTypeVariables StandaloneDeriving TemplateHaskell TupleSections TypeFamilies TypeOperators UndecidableInstances ViewPatterns TypeApplications
   ghc-options: -Wall
-  build-tool-depends:
-      autoexporter:autoexporter
   build-depends:
       QuickCheck
     , aeson

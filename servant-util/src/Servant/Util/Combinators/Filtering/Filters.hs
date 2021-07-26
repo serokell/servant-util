@@ -1,2 +1,7 @@
 -- | Various filter types.
-{-# OPTIONS_GHC -F -pgmF autoexporter -Wno-dodgy-exports -Wno-unused-imports #-}
+module Servant.Util.Combinators.Filtering.Filters
+  ( module M
+  ) where
+
+import Servant.Util.Combinators.Filtering.Filters.General as M
+import Servant.Util.Combinators.Filtering.Filters.Like as M
