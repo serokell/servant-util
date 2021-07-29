@@ -4,10 +4,10 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: f8f98d17af973304515c0305889a12f2f94d992dd126b9dbbb5adc8bc7767cdc
+-- hash: 162d0c665afc7e688062cc1007aa9fbc6aa2a300ac096144fffd1cd576b6fee1
 
 name:           servant-util
-version:        0.1.0.1
+version:        0.1.0.2
 synopsis:       Servant servers utilities.
 description:    Basement for common Servant combinators like filtering, sorting, pagination and semantical logging.
 category:       Servant, Web
