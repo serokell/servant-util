@@ -24,8 +24,24 @@ rec {
     src = ./.;
   };
 
+  # haskell.nix does not support 'include' in package.yaml, we have to generate .cabal ourselves
+  cabalFiles = pkgs.runCommand "servant-util-cabal-files" {} ''
+    mkdir -p $out
+    ${pkgs.lib.concatMapStrings ({ name, subdirectory }: ''
+      ${pkgs.haskellPackages.hpack}/bin/hpack ${projectSrc}/${subdirectory} - > $out/${name}.cabal
+    '') local-packages}
+  '';
+
   hs-pkgs = pkgs.haskell-nix.stackProject {
-    src = projectSrc;
+    # project src with .cabal files added
+    src = pkgs.runCommand "src-with-cabal" {} ''
+      cp -r --no-preserve=mode ${projectSrc} $out
+      ${pkgs.lib.concatMapStrings ({ name, subdirectory }: ''
+        cp ${cabalFiles}/${name}.cabal $out/${subdirectory}
+      '') local-packages}
+    '';
+
+    ignorePackageYaml = true;
 
     modules = [{
       # configuration for local packages
@@ -35,12 +51,6 @@ rec {
 
         # run haddock for local packages
         doHaddock = true;
-
-        # haskell.nix fails when package.yaml includes a file from the parent
-        # directory, override package src to work around it
-        # https://github.com/input-output-hk/haskell.nix/issues/485
-        src = projectSrc;
-        postUnpack = "sourceRoot=$sourceRoot/${subdirectories.${packageName}}";
       });
 
       # don't haddock dependencies
