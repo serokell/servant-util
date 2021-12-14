@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 162d0c665afc7e688062cc1007aa9fbc6aa2a300ac096144fffd1cd576b6fee1
+-- hash: b608ccd9a38aefbef7bdc08bf4df30612aa58f0f35ed96586c422f0270071072
 
 name:           servant-util
 version:        0.1.0.2
@@ -79,6 +79,7 @@ library
       QuickCheck
     , aeson
     , base >=4.7 && <5
+    , constraints
     , containers
     , data-default
     , fmt
@@ -119,6 +120,7 @@ executable servant-util-examples
       QuickCheck
     , aeson
     , base >=4.7 && <5
+    , constraints
     , containers
     , data-default
     , fmt
@@ -158,6 +160,7 @@ test-suite servant-util-test
       Test.Servant.Filtering.ImplSpec
       Test.Servant.Filtering.LikeSpec
       Test.Servant.Helpers
+      Test.Servant.Logging.ImplSpec
       Test.Servant.Pagination.ImplSpec
       Test.Servant.Sorting.ImplSpec
       Paths_servant_util
@@ -171,6 +174,7 @@ test-suite servant-util-test
       QuickCheck
     , aeson
     , base >=4.7 && <5
+    , constraints
     , containers
     , data-default
     , fmt

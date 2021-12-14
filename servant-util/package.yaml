@@ -9,6 +9,7 @@ category:            Servant, Web
 dependencies:
 - aeson
 - base >= 4.7 && < 5
+- constraints
 - containers
 - data-default
 - fmt

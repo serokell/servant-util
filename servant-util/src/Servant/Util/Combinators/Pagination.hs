@@ -86,13 +86,13 @@ instance ( HasServer subApi ctx
         hoistServerWithContext (Proxy @subApi) pc nt . s
 
 instance
-  ( HasLoggingServer config subApi ctx
+  ( HasLoggingServer config lcontext subApi ctx
   , KnownPaginationPageSize settings
   , HasContextEntry (ctx .++ DefaultErrorFormatters) ErrorFormatters
   ) =>
-  HasLoggingServer config (PaginationParams settings :> subApi) ctx where
+  HasLoggingServer config lcontext (PaginationParams settings :> subApi) ctx where
     routeWithLog =
-        inRouteServer @(PaginationParams settings :> LoggingApiRec config subApi) route $
+        inRouteServer @(PaginationParams settings :> LoggingApiRec config lcontext subApi) route $
         \(paramsInfo, handler) pagination@PaginationSpec{..} ->
             let text = merge . catMaybes $
                   [ guard (psOffset > 0) $> ("offset " <> show psOffset)
