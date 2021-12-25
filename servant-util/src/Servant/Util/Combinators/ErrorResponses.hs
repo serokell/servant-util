@@ -82,9 +82,9 @@ instance HasClient m subApi => HasClient m (ErrorResponses errors :> subApi) whe
     clientWithRoute pm _ = clientWithRoute pm (Proxy @subApi)
     hoistClientMonad pm _ hst = hoistClientMonad pm (Proxy @subApi) hst
 
-instance HasLoggingServer config lcontext subApi ctx =>
-         HasLoggingServer config lcontext (ErrorResponses errors :> subApi) ctx where
-    routeWithLog = inRouteServer @(ErrorResponses errors :> LoggingApiRec config lcontext subApi) route id
+instance HasLoggingServer config subApi ctx =>
+         HasLoggingServer config (ErrorResponses errors :> subApi) ctx where
+    routeWithLog = inRouteServer @(ErrorResponses errors :> LoggingApiRec config subApi) route id
 
 
 class KnownErrorCodes (errors :: [ErrorDesc]) where

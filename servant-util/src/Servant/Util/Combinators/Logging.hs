@@ -5,18 +5,9 @@ module Servant.Util.Combinators.Logging
     ( -- * Automatic requests logging
       LoggingApi
     , LoggingApiRec
-    , LoggingMod
-    , LoggingLevel
-    , LoggingRequestsEnabled
-    , LoggingRequestsDisabled
-    , LoggingResponsesEnabled
-    , LoggingResponsesDisabled
-    , LoggingDisabled
-    , LogContext (..)
     , HasLoggingServer (..)
     , ServantLogConfig (..)
     , ForResponseLog (..)
-    , BuildableForResponseIfNecessary
     , buildListForResponse
     , buildForResponse
     , ApiHasArgClass (..)
@@ -29,7 +20,6 @@ module Servant.Util.Combinators.Logging
 import Universum
 
 import Control.Monad.Error.Class (catchError, throwError)
-import Data.Constraint (Dict (..))
 import Data.Default (Default (..))
 import Data.Reflection (Reifies (..), reify)
 import Data.Swagger (Swagger)
@@ -40,9 +30,7 @@ import GHC.TypeLits (KnownSymbol, symbolVal)
 import Servant.API (Capture, Description, NoContent, NoContentVerb, QueryFlag, QueryParam', Raw,
                     ReflectMethod (..), ReqBody, SBoolI, Summary, Verb, (:<|>) (..), (:>))
 import Servant.API.Modifiers (FoldRequired, foldRequiredArgument)
-import Servant.Client (HasClient (..))
 import Servant.Server (Handler (..), HasServer (..), Server, ServerError (..))
-import Servant.Swagger (HasSwagger (..))
 import Servant.Swagger.UI.Core (SwaggerUiHtml)
 import System.Console.Pretty (Color (..), Style (..), color, style)
 
@@ -70,108 +58,10 @@ import Servant.Util.Common
 data LoggingApi config api
 
 -- | Helper to traverse servant api and apply logging.
-data LoggingApiRec config (lcontext :: LoggingContext) api
+data LoggingApiRec config api
 
--- | Logging context at type-level, accumulates all the 'LoggingMod' modifiers.
-data LoggingContext = LoggingContext
-  (Maybe Nat)  -- ^ Recommended logging level.
-  Bool  -- ^ Whether requests are logged.
-  Bool  -- ^ Whether responses are logged.
-
-type family EmptyLoggingContext :: LoggingContext where
-  EmptyLoggingContext = 'LoggingContext 'Nothing 'True 'True
-
-type family LcResponsesEnabled (lcontext :: LoggingContext) :: Bool where
-  LcResponsesEnabled ('LoggingContext _ _ flag) = flag
-
--- | Require 'Buildable' for the response type, but only if logging context
--- assumes that the response will indeed be built.
-type BuildableForResponseIfNecessary lcontext resp =
-  ( If (LcResponsesEnabled lcontext)
-      (Buildable (ForResponseLog resp))
-      (() :: Constraint)
-  , Demote (LcResponsesEnabled lcontext)
-  )
-
--- | Servant combinator that changes how the logs will be printed for the
--- affected endpoints.
---
--- This is an internal thing, we export aliases.
-data LoggingMod (mod :: LoggingModKind)
-
--- | How to change the logging of the endpoints.
-data LoggingModKind
-  = LMLoggingLevel Nat
-  | LMRequestsLogged Bool
-  | LMResponsesLogged Bool
-  | LMLoggingDisabled
-
--- | Combinator to set the logging level within the endpoints.
-type LoggingLevel lvl = LoggingMod ('LMLoggingLevel lvl)
-
--- | Combinator to disable logging of requests.
-type LoggingRequestsDisabled = LoggingMod ('LMRequestsLogged 'False)
-
--- | Combinator to enable logging of requests back for a narrower
--- set of entrypoints.
-type LoggingRequestsEnabled = LoggingMod ('LMRequestsLogged 'True)
-
--- | Combinator to disable logging of responses.
-type LoggingResponsesDisabled = LoggingMod ('LMResponsesLogged 'False)
-
--- | Combinator to enable logging of responses.
-type LoggingResponsesEnabled = LoggingMod ('LMResponsesLogged 'True)
-
--- | Combinator to disable all the logging.
---
--- This works similarly to other similar combinators and can be partially
--- or fully reverted with 'LoggingRequestsDisabled' or 'LoggingResponsesDisabled'.
-type LoggingDisabled = LoggingMod 'LMLoggingDisabled
-
--- | Full context of the logging action.
-data LogFullContext = LogFullContext
-  { lcRecommendedLevel :: Maybe Natural
-    -- ^ Logging level specified by 'LoggingLevel' combinator.
-    -- Will be provided to the user.
-  , lcRequestsEnabled  :: Bool
-    -- ^ Whether to log requests.
-    -- Accounted automatically.
-  , lcResponsesEnabled :: Bool
-    -- ^ Whether to log responses.
-    -- Accounted automatically.
-  } deriving (Show)
-
-type instance Demoted LoggingContext = LogFullContext
-instance ( ctx ~ 'LoggingContext lvl req resp
-         , Demote lvl
-         , Demote req
-         , Demote resp
-         ) => Demote ctx where
-  demote _ = LogFullContext
-    { lcRecommendedLevel = demote (Proxy @lvl)
-    , lcRequestsEnabled = demote (Proxy @req)
-    , lcResponsesEnabled = demote (Proxy @resp)
-    }
-
-type family ApplyLoggingMod (lcontext :: LoggingContext) (mod :: LoggingModKind) where
-  ApplyLoggingMod ('LoggingContext _ req resp) ('LMLoggingLevel lvl) =
-    'LoggingContext ('Just lvl) req resp
-  ApplyLoggingMod ('LoggingContext mlvl _ resp) ('LMRequestsLogged req) =
-    'LoggingContext mlvl req resp
-  ApplyLoggingMod ('LoggingContext mlvl req _) ('LMResponsesLogged resp) =
-    'LoggingContext mlvl req resp
-  ApplyLoggingMod ('LoggingContext mlvl _ _) 'LMLoggingDisabled =
-    'LoggingContext mlvl 'False 'False
-
--- | Logging context that will be supplied to the user.
-newtype LogContext = LogContext
-  { lecRecommendedLevel :: Maybe Natural
-    -- ^ Logging level specified by 'LoggingLevel' combinator.
-  } deriving (Show, Eq)
-
--- | Logging configuration specified at server start.
 newtype ServantLogConfig = ServantLogConfig
-    { clcLog :: LogContext -> Text -> IO ()
+    { clcLog :: Text -> IO ()
     }
 
 dullColor :: Color -> Text -> Text
@@ -225,13 +115,13 @@ buildListForResponse truncList (ForResponseLog l) =
 buildForResponse :: Buildable a => ForResponseLog a -> Builder
 buildForResponse = build . unForResponseLog
 
-instance ( HasServer (LoggingApiRec config EmptyLoggingContext api) ctx
+instance ( HasServer (LoggingApiRec config api) ctx
          , HasServer api ctx
          ) =>
          HasServer (LoggingApi config api) ctx where
     type ServerT (LoggingApi config api) m = ServerT api m
 
-    route = inRouteServer @(LoggingApiRec config EmptyLoggingContext api) route
+    route = inRouteServer @(LoggingApiRec config api) route
             (def, )
 
     hoistServerWithContext _ = hoistServerWithContext (Proxy :: Proxy api)
@@ -239,16 +129,16 @@ instance ( HasServer (LoggingApiRec config EmptyLoggingContext api) ctx
 -- | Version of 'HasServer' which is assumed to perform logging.
 -- It's helpful because 'ServerT (LoggingApi ...)' is already defined for us
 -- in actual 'HasServer' instance once and forever.
-class HasServer api ctx => HasLoggingServer config (lcontext :: LoggingContext) api ctx where
+class HasServer api ctx => HasLoggingServer config api ctx where
     routeWithLog
-        :: Proxy (LoggingApiRec config lcontext api)
+        :: Proxy (LoggingApiRec config api)
         -> SI.Context ctx
-        -> SI.Delayed env (Server (LoggingApiRec config lcontext api))
+        -> SI.Delayed env (Server (LoggingApiRec config api))
         -> SI.Router env
 
-instance HasLoggingServer config lcontext api ctx =>
-         HasServer (LoggingApiRec config lcontext api) ctx where
-    type ServerT (LoggingApiRec config lcontext api) m =
+instance HasLoggingServer config api ctx =>
+         HasServer (LoggingApiRec config api) ctx where
+    type ServerT (LoggingApiRec config api) m =
          (ApiParamsLogInfo, ServerT api m)
 
     route = routeWithLog
@@ -256,24 +146,24 @@ instance HasLoggingServer config lcontext api ctx =>
     hoistServerWithContext _ pc nt s =
         hoistServerWithContext (Proxy :: Proxy api) pc nt <$> s
 
-instance ( HasLoggingServer config lcontext api1 ctx
-         , HasLoggingServer config lcontext api2 ctx
+instance ( HasLoggingServer config api1 ctx
+         , HasLoggingServer config api2 ctx
          ) =>
-         HasLoggingServer config lcontext (api1 :<|> api2) ctx where
+         HasLoggingServer config (api1 :<|> api2) ctx where
     routeWithLog =
         inRouteServer
-            @(LoggingApiRec config lcontext api1 :<|> LoggingApiRec config lcontext api2)
+            @(LoggingApiRec config api1 :<|> LoggingApiRec config api2)
             route $
             \(paramsInfo, f1 :<|> f2) ->
                 let paramsInfo' = setInPrefix paramsInfo
                 in (paramsInfo', f1) :<|> (paramsInfo', f2)
 
 instance ( KnownSymbol path
-         , HasLoggingServer config lcontext res ctx
+         , HasLoggingServer config res ctx
          ) =>
-         HasLoggingServer config lcontext (path :> res) ctx where
+         HasLoggingServer config (path :> res) ctx where
     routeWithLog =
-        inRouteServer @(path :> LoggingApiRec config lcontext res) route $
+        inRouteServer @(path :> LoggingApiRec config res) route $
         first updateParamsInfo
       where
         updateParamsInfo =
@@ -315,20 +205,20 @@ instance KnownSymbol cs => ApiCanLogArg (QueryFlag cs) where
     type ApiArgToLog (QueryFlag cs) = Bool
 
 paramRouteWithLog
-    :: forall config lcontext api subApi res ctx env.
+    :: forall config api subApi res ctx env.
        ( api ~ (subApi :> res)
-       , HasServer (subApi :> LoggingApiRec config lcontext res) ctx
+       , HasServer (subApi :> LoggingApiRec config res) ctx
        , ApiHasArg subApi res
-       , ApiHasArg subApi (LoggingApiRec config lcontext res)
+       , ApiHasArg subApi (LoggingApiRec config res)
        , ApiCanLogArg subApi
        , Buildable (ApiArgToLog subApi)
        )
-    => Proxy (LoggingApiRec config lcontext api)
+    => Proxy (LoggingApiRec config api)
     -> SI.Context ctx
-    -> SI.Delayed env (Server (LoggingApiRec config lcontext api))
+    -> SI.Delayed env (Server (LoggingApiRec config api))
     -> SI.Router env
 paramRouteWithLog =
-    inRouteServer @(subApi :> LoggingApiRec config lcontext res) route $
+    inRouteServer @(subApi :> LoggingApiRec config res) route $
         \(paramsInfo, f) a -> (a `updateParamsInfo` paramsInfo, f a)
   where
     updateParamsInfo a =
@@ -338,35 +228,30 @@ paramRouteWithLog =
         in addParamLogInfo paramInfo . setInPrefix
 
 instance ( HasServer (subApi :> res) ctx
-         , HasServer (subApi :> LoggingApiRec config lcontext res) ctx
+         , HasServer (subApi :> LoggingApiRec config res) ctx
          , ApiHasArg subApi res
-         , ApiHasArg subApi (LoggingApiRec config lcontext res)
+         , ApiHasArg subApi (LoggingApiRec config res)
          , ApiCanLogArg subApi
          , Buildable (ApiArgToLog subApi)
          , subApi ~ apiType (a :: Type)
          ) =>
-         HasLoggingServer config lcontext (apiType a :> res) ctx where
+         HasLoggingServer config (apiType a :> res) ctx where
     routeWithLog = paramRouteWithLog
 
-instance ( HasLoggingServer config lcontext res ctx
+instance ( HasLoggingServer config res ctx
          , KnownSymbol s
          ) =>
-         HasLoggingServer config lcontext (QueryFlag s :> res) ctx where
+         HasLoggingServer config (QueryFlag s :> res) ctx where
     routeWithLog = paramRouteWithLog
 
-instance HasLoggingServer config lcontext res ctx =>
-         HasLoggingServer config lcontext (Summary s :> res) ctx where
-    routeWithLog = inRouteServer @(Summary s :> LoggingApiRec config lcontext res) route id
+instance HasLoggingServer config res ctx =>
+         HasLoggingServer config (Summary s :> res) ctx where
+    routeWithLog = inRouteServer @(Summary s :> LoggingApiRec config res) route id
 
-instance HasLoggingServer config lcontext res ctx =>
-         HasLoggingServer config lcontext (Description d :> res) ctx where
-    routeWithLog = inRouteServer @(Description d :> LoggingApiRec config lcontext res) route id
+instance HasLoggingServer config res ctx =>
+         HasLoggingServer config (Description d :> res) ctx where
+    routeWithLog = inRouteServer @(Description d :> LoggingApiRec config res) route id
 
-instance ( HasLoggingServer config (ApplyLoggingMod lcontext mod) res ctx
-         , HasServer res ctx
-         ) =>
-         HasLoggingServer config lcontext (LoggingMod mod :> res) ctx where
-    routeWithLog = inRouteServer @(LoggingApiRec config (ApplyLoggingMod lcontext mod) res) route id
 
 -- | Unique identifier for request-response pair.
 newtype RequestId = RequestId Integer
@@ -388,18 +273,15 @@ nextRequestId = atomically $ do
 -- | Modify an action so that it performs all the required logging.
 applyServantLogging
     :: ( Reifies config ServantLogConfig
-       , Demote (lcontext :: LoggingContext)
-       , Demote (LcResponsesEnabled lcontext)
        , ReflectMethod (method :: k)
        )
     => Proxy config
-    -> Proxy lcontext
     -> Proxy method
     -> ApiParamsLogInfo
-    -> If (LcResponsesEnabled lcontext) (a -> Text) ()
+    -> (a -> Text)
     -> Handler a
     -> Handler a
-applyServantLogging configP (contextP :: Proxy lcontext) methodP paramsInfo showResponse action = do
+applyServantLogging configP methodP paramsInfo showResponse action = do
     timer <- mkTimer
     reqId <- nextRequestId
     catchErrors reqId timer $ do
@@ -423,12 +305,8 @@ applyServantLogging configP (contextP :: Proxy lcontext) methodP paramsInfo show
         return $ do
             endTime <- liftIO getPOSIXTime
             return . show $ endTime - startTime
-    logContext = demote contextP
-    logEntryContext = LogContext
-      { lecRecommendedLevel = lcRecommendedLevel logContext
-      }
     log :: Text -> Handler ()
-    log txt = liftIO $ clcLog (reflect configP) logEntryContext txt
+    log = liftIO ... clcLog $ reflect configP
     eParamLogs :: Either Text Text
     eParamLogs = case paramsInfo of
         ApiParamsLogInfo _ path infos -> Right $
@@ -442,7 +320,6 @@ applyServantLogging configP (contextP :: Proxy lcontext) methodP paramsInfo show
         ApiNoParamsLogInfo why -> Left why
     reportRequest :: RequestId -> Handler ()
     reportRequest reqId =
-      when (lcRequestsEnabled logContext) $
         case eParamLogs of
             Left e ->
                 log $ "\n" +| dullColor Red "Unexecuted request due to error"
@@ -453,18 +330,15 @@ applyServantLogging configP (contextP :: Proxy lcontext) methodP paramsInfo show
                     |+ " "  +| gray ("Request " <> pretty reqId)
                     |+ "\n" +| paramLogs |+ ""
     responseTag reqId = "Response " <> pretty reqId
-    reportResponse reqId timer resp =
-      case tyBoolCase (Proxy @(LcResponsesEnabled lcontext)) of
-        Left _ -> pass
-        Right Dict -> do
-          durationText <- timer
-          log $
-              "\n    " +| gray (responseTag reqId)
-                |+ " " +| dullColor Green "OK"
-                |+ " " +| durationText
-                |+ " " +| gray ">"
-                |+ " " +| showResponse resp
-                |+ ""
+    reportResponse reqId timer resp = do
+        durationText <- timer
+        log $
+            "\n    " +| gray (responseTag reqId)
+              |+ " " +| (dullColor Green "OK")
+              |+ " " +| durationText
+              |+ " " +| gray ">"
+              |+ " " +| showResponse resp
+              |+ ""
     catchErrors reqId st =
         flip catchError (servantErrHandler reqId st) .
         handleAny (exceptionsHandler reqId st)
@@ -488,48 +362,38 @@ applyServantLogging configP (contextP :: Proxy lcontext) methodP paramsInfo show
         throwM e
 
 applyLoggingToHandler
-    :: forall k config lcontext method a.
-       ( Reifies config ServantLogConfig
-       , Demote lcontext
-       , BuildableForResponseIfNecessary lcontext a
-       , Demote lcontext
+    :: forall k config method a.
+       ( Buildable (ForResponseLog a)
+       , Reifies config ServantLogConfig
        , ReflectMethod method
        )
-    => Proxy config -> Proxy (lcontext :: LoggingContext) -> Proxy (method :: k)
-    -> (ApiParamsLogInfo, Handler a) -> Handler a
-applyLoggingToHandler configP contextP methodP (paramsInfo, handler) = do
-    let apply format =
-          applyServantLogging configP contextP methodP paramsInfo format handler
-    case tyBoolCase $ Proxy @(LcResponsesEnabled lcontext) of
-        Right Dict -> apply (pretty . ForResponseLog)
-        Left Dict  -> apply ()
+    => Proxy config -> Proxy (method :: k) -> (ApiParamsLogInfo, Handler a) -> Handler a
+applyLoggingToHandler configP methodP (paramsInfo, handler) = do
+    applyServantLogging configP methodP paramsInfo (pretty . ForResponseLog) handler
 
 skipLogging :: (ApiParamsLogInfo, action) -> action
 skipLogging = snd
 
 instance ( HasServer (Verb mt st ct a) ctx
          , Reifies config ServantLogConfig
-         , Demote lcontext
          , ReflectMethod mt
-         , BuildableForResponseIfNecessary lcontext a
+         , Buildable (ForResponseLog a)
          ) =>
-         HasLoggingServer config lcontext (Verb (mt :: k) (st :: Nat) (ct :: [Type]) a) ctx where
+         HasLoggingServer config (Verb (mt :: k) (st :: Nat) (ct :: [Type]) a) ctx where
     routeWithLog =
         inRouteServer @(Verb mt st ct a) route $
-        applyLoggingToHandler (Proxy @config) (Proxy @lcontext) (Proxy @mt)
+        applyLoggingToHandler (Proxy @config) (Proxy @mt)
 
 instance ( HasServer (NoContentVerb mt) ctx
          , Reifies config ServantLogConfig
-         , Demote lcontext
          , ReflectMethod mt
-         , BuildableForResponseIfNecessary lcontext NoContent
          ) =>
-         HasLoggingServer config lcontext (NoContentVerb (mt :: k)) ctx where
+         HasLoggingServer config (NoContentVerb (mt :: k)) ctx where
     routeWithLog =
         inRouteServer @(NoContentVerb mt) route $
-        applyLoggingToHandler (Proxy @config) (Proxy @lcontext) (Proxy @mt)
+        applyLoggingToHandler (Proxy @config) (Proxy @mt)
 
-instance HasLoggingServer config lcontext Raw ctx where
+instance HasLoggingServer config Raw ctx where
     routeWithLog = inRouteServer @Raw route skipLogging
 
 instance Buildable (ForResponseLog NoContent) where
@@ -546,22 +410,6 @@ instance Buildable (ForResponseLog Swagger) where
 
 instance Buildable (ForResponseLog (SwaggerUiHtml dir api)) where
     build _ = "Accessed documentation UI"
-
-instance HasServer api ctx =>
-         HasServer (LoggingMod mod :> api) ctx where
-    type ServerT (LoggingMod mod :> api) m = ServerT api m
-    route = inRouteServer @api route id
-    hoistServerWithContext _ = hoistServerWithContext (Proxy @api)
-
-instance HasClient m api =>
-         HasClient m (LoggingMod mod :> api) where
-    type Client m (LoggingMod mod :> api) = Client m api
-    clientWithRoute mp _ = clientWithRoute mp (Proxy @api)
-    hoistClientMonad mp _ = hoistClientMonad mp (Proxy @api)
-
-instance HasSwagger api =>
-         HasSwagger (LoggingMod mod :> api) where
-    toSwagger _ = toSwagger (Proxy @api)
 
 -- | Apply logging to the given server.
 serverWithLogging

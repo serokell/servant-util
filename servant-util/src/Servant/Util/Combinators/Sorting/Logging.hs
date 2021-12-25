@@ -15,14 +15,14 @@ import Servant.Util.Combinators.Sorting.Base
 import Servant.Util.Combinators.Sorting.Server ()
 import Servant.Util.Common
 
-instance ( HasLoggingServer config lcontext subApi ctx
+instance ( HasLoggingServer config subApi ctx
          , HasContextEntry (ctx .++ DefaultErrorFormatters) ErrorFormatters
          , ReifySortingItems base
          , ReifyParamsNames provided
          ) =>
-         HasLoggingServer config lcontext (SortingParams provided base :> subApi) ctx where
+         HasLoggingServer config (SortingParams provided base :> subApi) ctx where
     routeWithLog =
-        inRouteServer @(SortingParams provided base :> LoggingApiRec config lcontext subApi) route $
+        inRouteServer @(SortingParams provided base :> LoggingApiRec config subApi) route $
         \(paramsInfo, handler) sorting@(SortingSpec provided) ->
             let paramLog
                   | null provided = "no sorting"

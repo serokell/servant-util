@@ -31,9 +31,9 @@ instance HasClient m subApi => HasClient m (Tag name :> subApi) where
     clientWithRoute pm _ = clientWithRoute pm (Proxy @subApi)
     hoistClientMonad pm _ hst = hoistClientMonad pm (Proxy @subApi) hst
 
-instance HasLoggingServer config lcontext subApi ctx =>
-         HasLoggingServer config lcontext (Tag name :> subApi) ctx where
-    routeWithLog = inRouteServer @(Tag name :> LoggingApiRec config lcontext subApi) route id
+instance HasLoggingServer config subApi ctx =>
+         HasLoggingServer config (Tag name :> subApi) ctx where
+    routeWithLog = inRouteServer @(Tag name :> LoggingApiRec config subApi) route id
 
 instance (HasSwagger subApi, KnownSymbol name) =>
          HasSwagger (Tag name :> subApi) where
@@ -68,10 +68,10 @@ instance HasClient m subApi => HasClient m (TagDescriptions ver mapping :> subAp
     clientWithRoute pm _ = clientWithRoute pm (Proxy @subApi)
     hoistClientMonad pm _ hst = hoistClientMonad pm (Proxy @subApi) hst
 
-instance HasLoggingServer config context subApi ctx =>
-         HasLoggingServer config context (TagDescriptions ver mapping :> subApi) ctx where
+instance HasLoggingServer config subApi ctx =>
+         HasLoggingServer config (TagDescriptions ver mapping :> subApi) ctx where
     routeWithLog =
-        inRouteServer @(TagDescriptions ver mapping :> LoggingApiRec config context subApi)
+        inRouteServer @(TagDescriptions ver mapping :> LoggingApiRec config subApi)
         route id
 
 -- | Gather all tag names used in API. Result may contain duplicates.

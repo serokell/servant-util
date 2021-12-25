@@ -21,19 +21,14 @@ module Servant.Util.Common.PolyKinds
     , type (//)
     , InsSorted
     , UnionSorted
-    , Demote (..)
-    , Demoted
-    , tyBoolCase
     ) where
 
 import Universum
 
-import Data.Constraint (Dict (..))
 import qualified Data.Set as S
 import GHC.TypeLits (AppendSymbol, CmpSymbol, ErrorMessage (..), KnownSymbol, Symbol, TypeError,
                      symbolVal)
 import Servant (If)
-import Unsafe.Coerce (unsafeCoerce)
 
 -- | Pair of type and its name as it appears in API.
 data TyNamedParam a = TyNamedParam Symbol a
@@ -134,39 +129,3 @@ type family UnionSorted (ss1 :: [Symbol]) (ss2 :: [Symbol]) :: [Symbol] where
                (s1 ': UnionSorted ss1 (s2 ': ss2))
                (s2 ': UnionSorted (s1 ': ss1) ss2)
           )
-
--- | Bring a type-level data to term-level.
---
--- We don't want to depend on large @singletons@ library, so
--- providing our own small parts.
---
--- TODO: use this instead of custom typeclasses in other places.
-class Demote (ty :: k) where
-  demote :: Proxy ty -> Demoted k
-
-type family Demoted k :: Type
-
-type instance Demoted Bool = Bool
-instance Demote 'True where
-  demote _ = True
-instance Demote 'False where
-  demote _ = False
-
--- | Pattern-match on type-level bool.
-tyBoolCase
-  :: Demote b
-  => Proxy (b :: Bool)
-  -> Either (Dict (b ~ 'False)) (Dict (b ~ 'True))
-tyBoolCase p = case demote p of
-  False -> Left $ unsafeCoerce $ Dict @(() ~ ())
-  True  -> Right $ unsafeCoerce $ Dict @(() ~ ())
-
-type instance Demoted (Maybe k) = Maybe (Demoted k)
-instance Demote 'Nothing where
-  demote _ = Nothing
-instance Demote a => Demote ('Just (a :: k)) where
-  demote _ = Just $ demote (Proxy @a)
-
-type instance Demoted Nat = Natural
-instance KnownNat a => Demote a where
-  demote = natVal

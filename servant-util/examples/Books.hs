@@ -101,4 +101,4 @@ serveBooksServer =
     serve @(SwaggerSchemaUI "swagger-ui" "swagger.json" :<|> api) Proxy
       (swaggerSchemaUIServer swagger :<|> booksHandlers)
   where
-    loggingConfig = ServantLogConfig $ \_ -> putTextLn
+    loggingConfig = ServantLogConfig putTextLn
