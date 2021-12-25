@@ -59,14 +59,14 @@ instance ( KnownSymbol name
 buildSomeFilter :: BuildSomeFilter params => SomeFilter params -> Builder
 buildSomeFilter sf = buildSomeFilter' sf ?: error "Failed to build some filter"
 
-instance ( HasLoggingServer config subApi ctx
+instance ( HasLoggingServer config lcontext subApi ctx
          , AreFilteringParams params
          , ReifyParamsNames params
          , BuildSomeFilter params
          ) =>
-         HasLoggingServer config (FilteringParams params :> subApi) ctx where
+         HasLoggingServer config lcontext (FilteringParams params :> subApi) ctx where
     routeWithLog =
-        inRouteServer @(FilteringParams params :> LoggingApiRec config subApi) route $
+        inRouteServer @(FilteringParams params :> LoggingApiRec config lcontext subApi) route $
         \(paramsInfo, handler) filtering@(FilteringSpec params) ->
             let paramLog
                   | null params = "no filters"

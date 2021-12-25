@@ -1,6 +1,7 @@
 module Test.Servant.Helpers
     ( runTestServer
     , runTestServerE
+    , runTestServer'
     ) where
 
 import Universum
@@ -12,7 +13,7 @@ import Servant.API.Generic (GenericServant, ToServant, ToServantApi)
 import Servant.Client (BaseUrl (..), Client, ClientEnv, ClientError, ClientM, HasClient,
                        Scheme (Http), mkClientEnv, runClientM)
 import Servant.Client.Generic (AsClientT, genericClientHoist)
-import Servant.Server (HasServer, Server)
+import Servant.Server (HasServer, Server, serve)
 import Servant.Server.Generic (AsServer, genericServe)
 
 mkTestClientEnv :: Port -> IO ClientEnv
@@ -64,6 +65,28 @@ runTestServer
   -> IO ()
 runTestServer handlers acceptClientHandlers =
   testWithApplication (pure $ genericServe handlers) $ \port -> do
+    cliEnv <- mkTestClientEnv port
+    acceptClientHandlers $
+      genericClientHoist (flip runClientM cliEnv >=> either throwM pure)
+
+-- | Runs server and returns client handlers to it.
+--
+-- This is similar to 'runTestServer', but accepts any server that matches the client,
+-- not necessarily in servant-generic format (which is a quite tough restriction).
+runTestServer'
+  :: forall api methods.
+     ( HasServer api '[]
+     , ToServant methods AsServer ~ Server api
+     , GenericServant methods (AsClientT IO)
+     , HasClient ClientM (ToServantApi methods)
+     , Client IO (ToServantApi methods) ~ ToServant methods (AsClientT IO)
+     )
+  => Proxy api
+  -> Server api
+  -> (methods (AsClientT IO) -> IO ())
+  -> IO ()
+runTestServer' apiP handlers acceptClientHandlers =
+  testWithApplication (pure $ serve apiP handlers) $ \port -> do
     cliEnv <- mkTestClientEnv port
     acceptClientHandlers $
       genericClientHoist (flip runClientM cliEnv >=> either throwM pure)
