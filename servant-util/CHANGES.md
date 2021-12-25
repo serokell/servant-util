@@ -1,5 +1,9 @@
 Unreleased
 =====
+
+0.2
+=====
+
 * Added logging modifiers to API.
   In log config, printing function now accepts one more argument
   (feel free to ignore it by default).
