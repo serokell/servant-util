@@ -19,10 +19,12 @@ dependencies:
 - megaparsec
 - mtl
 - pretty-terminal
+- openapi3
 - safe-exceptions
 - servant
 - servant-client
 - servant-client-core
+- servant-openapi3
 - servant-server
 - servant-swagger
 - servant-swagger-ui

@@ -1,10 +1,10 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.33.0.
+-- This file has been generated from package.yaml by hpack version 0.34.6.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 936cf3a2b61cfa35f3cca3316f3946e3e890066234f3e915b0190b1b41bb84a6
+-- hash: 38c6786a201462ff66fd6337423755b8df4698ec5793e0a57a3c508c12fff6e1
 
 name:           servant-util
 version:        0.2
@@ -66,14 +66,48 @@ library
       Servant.Util.Dummy.Sorting
       Servant.Util.Error
       Servant.Util.Internal.Util
+      Servant.Util.OpenApiType
       Servant.Util.Stats
       Servant.Util.Swagger
+      Servant.Util.SwaggerType
       Servant.Util.Util
   other-modules:
       Paths_servant_util
   hs-source-dirs:
       src
-  default-extensions: AllowAmbiguousTypes BangPatterns ConstraintKinds DataKinds DefaultSignatures DeriveDataTypeable DeriveGeneric EmptyCase FlexibleContexts FlexibleInstances FunctionalDependencies GADTs GeneralizedNewtypeDeriving LambdaCase MultiParamTypeClasses MultiWayIf NamedFieldPuns NoImplicitPrelude OverloadedStrings OverloadedLabels PatternSynonyms RankNTypes RecordWildCards ScopedTypeVariables StandaloneDeriving TemplateHaskell TupleSections TypeFamilies TypeOperators UndecidableInstances ViewPatterns TypeApplications
+  default-extensions:
+      AllowAmbiguousTypes
+      BangPatterns
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveDataTypeable
+      DeriveGeneric
+      EmptyCase
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      GeneralizedNewtypeDeriving
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedStrings
+      OverloadedLabels
+      PatternSynonyms
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      StandaloneDeriving
+      TemplateHaskell
+      TupleSections
+      TypeFamilies
+      TypeOperators
+      UndecidableInstances
+      ViewPatterns
+      TypeApplications
   ghc-options: -Wall
   build-depends:
       QuickCheck
@@ -88,6 +122,7 @@ library
     , lens
     , megaparsec
     , mtl
+    , openapi3
     , pretty-terminal
     , reflection
     , regex-posix
@@ -95,6 +130,7 @@ library
     , servant
     , servant-client
     , servant-client-core
+    , servant-openapi3
     , servant-server
     , servant-swagger
     , servant-swagger-ui
@@ -111,10 +147,43 @@ executable servant-util-examples
   main-is: Main.hs
   other-modules:
       Books
+      BooksOpenApi
       Paths_servant_util
   hs-source-dirs:
       examples
-  default-extensions: AllowAmbiguousTypes BangPatterns ConstraintKinds DataKinds DefaultSignatures DeriveDataTypeable DeriveGeneric EmptyCase FlexibleContexts FlexibleInstances FunctionalDependencies GADTs GeneralizedNewtypeDeriving LambdaCase MultiParamTypeClasses MultiWayIf NamedFieldPuns NoImplicitPrelude OverloadedStrings OverloadedLabels PatternSynonyms RankNTypes RecordWildCards ScopedTypeVariables StandaloneDeriving TemplateHaskell TupleSections TypeFamilies TypeOperators UndecidableInstances ViewPatterns TypeApplications
+  default-extensions:
+      AllowAmbiguousTypes
+      BangPatterns
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveDataTypeable
+      DeriveGeneric
+      EmptyCase
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      GeneralizedNewtypeDeriving
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedStrings
+      OverloadedLabels
+      PatternSynonyms
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      StandaloneDeriving
+      TemplateHaskell
+      TupleSections
+      TypeFamilies
+      TypeOperators
+      UndecidableInstances
+      ViewPatterns
+      TypeApplications
   ghc-options: -Wall -threaded -rtsopts -with-rtsopts=-N -O2
   build-depends:
       QuickCheck
@@ -129,6 +198,7 @@ executable servant-util-examples
     , lens
     , megaparsec
     , mtl
+    , openapi3
     , pretty-terminal
     , reflection
     , regex-posix
@@ -136,6 +206,7 @@ executable servant-util-examples
     , servant
     , servant-client
     , servant-client-core
+    , servant-openapi3
     , servant-server
     , servant-swagger
     , servant-swagger-ui
@@ -166,7 +237,39 @@ test-suite servant-util-test
       Paths_servant_util
   hs-source-dirs:
       tests
-  default-extensions: AllowAmbiguousTypes BangPatterns ConstraintKinds DataKinds DefaultSignatures DeriveDataTypeable DeriveGeneric EmptyCase FlexibleContexts FlexibleInstances FunctionalDependencies GADTs GeneralizedNewtypeDeriving LambdaCase MultiParamTypeClasses MultiWayIf NamedFieldPuns NoImplicitPrelude OverloadedStrings OverloadedLabels PatternSynonyms RankNTypes RecordWildCards ScopedTypeVariables StandaloneDeriving TemplateHaskell TupleSections TypeFamilies TypeOperators UndecidableInstances ViewPatterns TypeApplications
+  default-extensions:
+      AllowAmbiguousTypes
+      BangPatterns
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveDataTypeable
+      DeriveGeneric
+      EmptyCase
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      GeneralizedNewtypeDeriving
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedStrings
+      OverloadedLabels
+      PatternSynonyms
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      StandaloneDeriving
+      TemplateHaskell
+      TupleSections
+      TypeFamilies
+      TypeOperators
+      UndecidableInstances
+      ViewPatterns
+      TypeApplications
   ghc-options: -Wall -threaded -rtsopts -with-rtsopts=-N
   build-tool-depends:
       hspec-discover:hspec-discover
@@ -186,6 +289,7 @@ test-suite servant-util-test
     , lens
     , megaparsec
     , mtl
+    , openapi3
     , pretty-terminal
     , reflection
     , regex-posix
@@ -193,6 +297,7 @@ test-suite servant-util-test
     , servant
     , servant-client
     , servant-client-core
+    , servant-openapi3
     , servant-server
     , servant-swagger
     , servant-swagger-ui
