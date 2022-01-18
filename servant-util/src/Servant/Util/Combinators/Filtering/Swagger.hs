@@ -6,10 +6,13 @@ module Servant.Util.Combinators.Filtering.Swagger () where
 import Universum
 
 import Control.Lens ((<>~))
+import qualified Data.HashMap.Strict.InsOrd as HM
+import qualified Data.OpenApi as O
 import qualified Data.Swagger as S
 import qualified Data.Text as T
 import GHC.TypeLits (KnownSymbol)
 import Servant.API ((:>))
+import Servant.OpenApi (HasOpenApi (..))
 import Servant.Swagger (HasSwagger (..))
 
 import Servant.Util.Combinators.Filtering.Base
@@ -29,6 +32,25 @@ filterSwaggerParam name desc =
         , S._paramOtherSchemaParamSchema = S.toParamSchema (Proxy @a)
         }
     }
+
+-- | Make a 'O.Param' for a filtering query parameter.
+filterOpenApiParam :: forall a. O.ToParamSchema a => Text -> Text -> O.Param
+filterOpenApiParam name desc =
+    O.Param
+    { O._paramName = name
+    , O._paramDescription = Just desc
+    , O._paramRequired = Just False
+    , O._paramDeprecated = Just False
+    , O._paramIn = O.ParamQuery
+    , O._paramAllowEmptyValue = Just True
+    , O._paramAllowReserved = Nothing
+    , O._paramStyle = Just O.StyleDeepObject
+    , O._paramExample = Nothing
+    , O._paramExamples = HM.empty
+    , O._paramExplode = Just True
+    , O._paramSchema = Just . O.Inline $ O.toParamSchema (Proxy @a)
+    }
+
 
 parenValueDesc :: forall a. KnownSymbol (ParamDescription a) => Text
 parenValueDesc = "(" <> stripTrailingDot (symbolValT @(ParamDescription a)) <> ")"
@@ -82,12 +104,25 @@ instance ( IsAutoFilter filter
 class FilterKindHasSwagger (fk :: FilterKind Type) where
     filterKindSwagger :: Text -> S.Param
 
-instance DescribedParam a => FilterKindHasSwagger ('ManualFilter a) where
+instance DescribedSwaggerParam a => FilterKindHasSwagger ('ManualFilter a) where
     filterKindSwagger name = filterSwaggerParam @a name (manualFilterDesc @a)
 
-instance (DescribedParam a, AutoFiltersOpsDesc (SupportedFilters a)) =>
+instance (DescribedSwaggerParam a, AutoFiltersOpsDesc (SupportedFilters a)) =>
          FilterKindHasSwagger ('AutoFilter a) where
     filterKindSwagger name = filterSwaggerParam @a name (autoFilterDesc @a ops)
+      where
+        ops = autoFiltersOpsDesc @(SupportedFilters a)
+
+-- | Get documentation for the given filter kind.
+class FilterKindHasOpenApi (fk :: FilterKind Type) where
+    filterKindOpenApi :: Text -> O.Param
+
+instance DescribedOpenApiParam a => FilterKindHasOpenApi ('ManualFilter a) where
+    filterKindOpenApi name = filterOpenApiParam @a name (manualFilterDesc @a)
+
+instance (DescribedOpenApiParam a, AutoFiltersOpsDesc (SupportedFilters a)) =>
+         FilterKindHasOpenApi ('AutoFilter a) where
+    filterKindOpenApi name = filterOpenApiParam @a name (autoFilterDesc @a ops)
       where
         ops = autoFiltersOpsDesc @(SupportedFilters a)
 
@@ -109,3 +144,22 @@ instance (HasSwagger api, ReifyParamsNames params, FilterParamsHaveSwagger param
          HasSwagger (FilteringParams params :> api) where
     toSwagger _ = toSwagger (Proxy @api)
         & S.allOperations . S.parameters <>~ map S.Inline (filterParamsSwagger @params)
+
+-- | Get documentation for given filtering params.
+class FilterParamsHaveOpenApi (params :: [TyNamedFilter]) where
+    filterParamsOpenApi :: [O.Param]
+
+instance FilterParamsHaveOpenApi '[] where
+  filterParamsOpenApi = mempty
+
+instance ( KnownSymbol name, FilterKindHasOpenApi fk
+         , FilterParamsHaveOpenApi params
+         ) =>
+         FilterParamsHaveOpenApi ('TyNamedParam name fk ': params) where
+    filterParamsOpenApi =
+        filterKindOpenApi @fk (symbolValT @name) : filterParamsOpenApi @params
+
+instance (HasOpenApi api, ReifyParamsNames params, FilterParamsHaveOpenApi params) =>
+         HasOpenApi (FilteringParams params :> api) where
+    toOpenApi _ = toOpenApi (Proxy @api)
+        & O.allOperations . O.parameters <>~ map O.Inline (filterParamsOpenApi @params)

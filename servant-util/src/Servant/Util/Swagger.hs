@@ -1,6 +1,7 @@
 module Servant.Util.Swagger
     ( ParamDescription
-    , DescribedParam
+    , DescribedOpenApiParam
+    , DescribedSwaggerParam
     , paramDescription
 
     , QueryFlagDescription
@@ -9,18 +10,20 @@ module Servant.Util.Swagger
     ) where
 
 import Universum
+import qualified Data.OpenApi.Lens as OT
+import qualified Data.Swagger.Lens as ST
 
 import Control.Exception (assert)
-import Control.Lens (_head, ix, makePrisms, zoom, (?=))
+import Control.Lens (_head, ix, zoom, (?=))
+import qualified Data.OpenApi as O
 import qualified Data.Swagger as S
 import GHC.TypeLits (KnownSymbol, Symbol)
 import Servant (Capture', Description, EmptyAPI, NoContent, QueryFlag, QueryParam', Raw, StdMethod,
                 Verb, (:<|>), (:>))
+import Servant.OpenApi (HasOpenApi (..))
 import Servant.Swagger (HasSwagger (..))
 
 import Servant.Util.Common
-
-makePrisms ''S.Referenced
 
 ----------------------------------------------------------------------------
 -- Parameter description
@@ -28,14 +31,16 @@ makePrisms ''S.Referenced
 
 -- | Description of parameter.
 --
--- Unfortunatelly, @servant-swagger@ package, when deriving description of
+-- Unfortunately, @servant-swagger@ package, when deriving description of
 -- an endpoint parameter, fills its description for you and makes you implement
 -- just 'ParamSchema' which has no description field.
 -- To circumvent that you can define description in instance of this type family
 -- and later override swagger derivation accordingly.
 type family ParamDescription a :: Symbol
 
-type DescribedParam a = (S.ToParamSchema a, KnownSymbol (ParamDescription a))
+type DescribedSwaggerParam a = (S.ToParamSchema a, KnownSymbol (ParamDescription a))
+
+type DescribedOpenApiParam a = (O.ToParamSchema a, KnownSymbol (ParamDescription a))
 
 -- | Set description according to 'ParamDescription' definition.
 paramDescription
@@ -62,8 +67,19 @@ instance (HasSwagger (Capture' mods sym a :> api), HasSwagger api) =>
       where
         desc404L :: Traversal' S.Swagger Text
         desc404L = S.allOperations . S.responses . S.responses .
-                   ix 404 . _Inline . S.description
+                   ix 404 . ST._Inline . S.description
         pureDesc404 = toSwagger (Proxy @api) ^? desc404L
+
+instance (HasOpenApi (Capture' mods sym a :> api), HasOpenApi  api) =>
+         HasOpenApi  (SwaggerCapture mods sym a :> api) where
+    toOpenApi _ =
+        toOpenApi (Proxy @(Capture' mods sym a :> api))
+            & desc404L .~ fromMaybe "" pureDesc404
+      where
+        desc404L :: Traversal' O.OpenApi Text
+        desc404L = O.allOperations . O.responses . O.responses .
+                   ix 404 . OT._Inline . O.description
+        pureDesc404 = toOpenApi (Proxy @api) ^? desc404L
 
 ----------------------------------------------------------------------------
 -- QueryParam description
@@ -82,8 +98,19 @@ instance (HasSwagger (QueryParam' mods sym a :> api), HasSwagger api) =>
       where
         desc404L :: Traversal' S.Swagger Text
         desc404L = S.allOperations . S.responses . S.responses .
-                   ix 404 . _Inline . S.description
+                   ix 404 . ST._Inline . S.description
         pureDesc404 = toSwagger (Proxy @api) ^? desc404L
+
+instance (HasOpenApi (QueryParam' mods sym a :> api), HasOpenApi api) =>
+         HasOpenApi (SwaggerQueryParam mods sym a :> api) where
+    toOpenApi _ =
+      toOpenApi (Proxy @(QueryParam' mods sym a :> api))
+          & desc404L .~ fromMaybe "" pureDesc404
+      where
+        desc404L :: Traversal' O.OpenApi Text
+        desc404L = O.allOperations . O.responses . O.responses .
+                   ix 404 . OT._Inline . O.description
+        pureDesc404 = toOpenApi (Proxy @api) ^? desc404L
 
 ----------------------------------------------------------------------------
 -- Query flag description
@@ -101,13 +128,25 @@ type instance QueryFlagDescription "onlyCount" =
 instance (HasSwagger subApi, KnownSymbol name, KnownSymbol (QueryFlagDescription name)) =>
          HasSwagger (SwaggerQueryFlag name :> subApi) where
     toSwagger _ = toSwagger (Proxy @(QueryFlag name :> subApi)) `executingState` do
-        zoom (S.allOperations . S.parameters . _head . _Inline) $ do
+        zoom (S.allOperations . S.parameters . _head . ST._Inline) $ do
             paramName <- use S.name
             assert (name == paramName) pass
             S.description ?= desc
       where
         name = symbolValT @name
         desc = symbolValT @(QueryFlagDescription name)
+
+instance (HasOpenApi subApi, KnownSymbol name, KnownSymbol (QueryFlagDescription name)) =>
+         HasOpenApi (SwaggerQueryFlag name :> subApi) where
+    toOpenApi _ = toOpenApi (Proxy @(QueryFlag name :> subApi)) `executingState` do
+        zoom (O.allOperations . O.parameters . _head . OT._Inline) $ do
+            paramName <- use O.name
+            assert (name == paramName) pass
+            O.description ?= desc
+      where
+        name = symbolValT @name
+        desc = symbolValT @(QueryFlagDescription name)
+
 
 ----------------------------------------------------------------------------
 -- Global

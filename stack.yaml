@@ -17,6 +17,7 @@ extra-deps:
 - constraints-extras-0.3.0.2
 - network-uri-json-0.4.0.0
 - hspec-2.7.9
+- servant-openapi3-2.0.1.3
 
 allow-newer: true
 

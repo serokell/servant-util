@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 38c6786a201462ff66fd6337423755b8df4698ec5793e0a57a3c508c12fff6e1
+-- hash: 92cd83d25132104b8b6f8c64ec9e71991c08fe34e707255ecb287182eb762b80
 
 name:           servant-util
 version:        0.2
@@ -66,10 +66,8 @@ library
       Servant.Util.Dummy.Sorting
       Servant.Util.Error
       Servant.Util.Internal.Util
-      Servant.Util.OpenApiType
       Servant.Util.Stats
       Servant.Util.Swagger
-      Servant.Util.SwaggerType
       Servant.Util.Util
   other-modules:
       Paths_servant_util
