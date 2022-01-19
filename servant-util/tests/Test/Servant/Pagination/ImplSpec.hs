@@ -8,6 +8,7 @@ import qualified Data.Aeson as Aeson
 import Servant.API (Get, JSON, (:>))
 import Servant.API.Generic (ToServantApi, (:-))
 import Servant.Server.Generic (AsServer)
+import Servant.OpenApi (toOpenApi)
 import Servant.Swagger (toSwagger)
 
 import Test.Hspec (Spec, aroundAll, describe, it)
@@ -54,6 +55,16 @@ printPaginationSwagger =
   writeFile "pagination-test-swagger.json" $
     decodeUtf8 . Aeson.encode $
     toSwagger $ Proxy @(ToServantApi ApiMethods)
+
+-- OpenApi
+---------------------------------------------------------------------------
+
+-- You can try this with ghci
+printPaginationOpenApi :: IO ()
+printPaginationOpenApi =
+  writeFile "pagination-test-openapi.json" $
+    decodeUtf8 . Aeson.encode $
+    toOpenApi $ Proxy @(ToServantApi ApiMethods)
 
 -- Tests
 ---------------------------------------------------------------------------
