@@ -14,11 +14,13 @@ import Universum
 
 import Control.Lens ((<>~), (?~))
 import Data.Default (Default (..))
+import qualified Data.OpenApi as O
 import qualified Data.Swagger as S
 import qualified Data.Text as T
 import Servant (DefaultErrorFormatters, ErrorFormatters, HasContextEntry, HasServer (..),
                 QueryParam, (:>))
 import Servant.Client (HasClient (..))
+import Servant.OpenApi (HasOpenApi (..))
 import Servant.Swagger (HasSwagger (..))
 
 import Servant.Server.Internal.Context (type (.++))
@@ -144,6 +146,7 @@ instance HasClient m subApi =>
 
     hoistClientMonad pm _ hst subCli = hoistClientMonad pm (Proxy @subApi) hst . subCli
 
+-- Swagger instance
 instance (HasSwagger api, KnownPaginationPageSize settings) =>
          HasSwagger (PaginationParams settings :> api) where
     toSwagger _ = toSwagger (Proxy @api)
@@ -179,6 +182,42 @@ instance (HasSwagger api, KnownPaginationPageSize settings) =>
             & S.type_ ?~ S.SwaggerInteger
             & S.format ?~ "int32"
             & S.pattern ?~ "^\\d*[1-9]\\d*$"
+        defaultPageSizeDesc = case settingDefPageSize @settings of
+          Nothing -> "By default, no limit will be applied."
+          Just s  -> "Defaults to " <> show (unPositive s) <> "."
+
+-- OpenApi instance
+instance (HasOpenApi api, KnownPaginationPageSize settings) =>
+         HasOpenApi (PaginationParams settings :> api) where
+    toOpenApi _ = toOpenApi (Proxy @api)
+        & O.allOperations . O.parameters <>~ [O.Inline offsetParam, O.Inline limitParam]
+      where
+        offsetParam :: O.Param
+        limitParam :: O.Param
+        offsetParam = mempty
+            & O.name .~ "offset"
+            & O.description ?~
+                "Pagination parameter. How many items to skip from the beginning."
+            & O.required ?~ False
+            & O.in_ .~ O.ParamQuery
+            & O.schema ?~ O.Inline offsetParamSchema
+        offsetParamSchema = mempty
+            & O.type_ ?~ O.OpenApiInteger
+            & O.format ?~ "int32"
+
+        limitParam = mempty
+            & O.name .~ "limit"
+            & O.description ?~ mconcat
+                [ "Pagination parameter. Maximum number of items to return.\n"
+                , defaultPageSizeDesc
+                ]
+            & O.required ?~ False
+            & O.in_ .~ O.ParamQuery
+            & O.schema ?~ O.Inline limitParamSchema
+        limitParamSchema = mempty
+            & O.type_ ?~ O.OpenApiInteger
+            & O.format ?~ "int32"
+            & O.pattern ?~ "^\\d*[1-9]\\d*$"
         defaultPageSizeDesc = case settingDefPageSize @settings of
           Nothing -> "By default, no limit will be applied."
           Just s  -> "Defaults to " <> show (unPositive s) <> "."

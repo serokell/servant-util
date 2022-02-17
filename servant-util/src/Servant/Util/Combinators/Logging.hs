@@ -31,6 +31,7 @@ import Universum
 import Control.Monad.Error.Class (catchError, throwError)
 import Data.Constraint (Dict (..))
 import Data.Default (Default (..))
+import Data.OpenApi (OpenApi)
 import Data.Reflection (Reifies (..), reify)
 import Data.Swagger (Swagger)
 import Data.Time.Clock.POSIX (getPOSIXTime)
@@ -41,6 +42,7 @@ import Servant.API (Capture, Description, NoContent, NoContentVerb, QueryFlag, Q
                     ReflectMethod (..), ReqBody, SBoolI, Summary, Verb, (:<|>) (..), (:>))
 import Servant.API.Modifiers (FoldRequired, foldRequiredArgument)
 import Servant.Client (HasClient (..))
+import Servant.OpenApi (HasOpenApi (..))
 import Servant.Server (Handler (..), HasServer (..), Server, ServerError (..))
 import Servant.Swagger (HasSwagger (..))
 import Servant.Swagger.UI.Core (SwaggerUiHtml)
@@ -544,6 +546,9 @@ instance Buildable (ForResponseLog Integer) where
 instance Buildable (ForResponseLog Swagger) where
     build _ = "Swagger specification"
 
+instance Buildable (ForResponseLog OpenApi) where
+    build _ = "OpenApi specification"
+
 instance Buildable (ForResponseLog (SwaggerUiHtml dir api)) where
     build _ = "Accessed documentation UI"
 
@@ -562,6 +567,10 @@ instance HasClient m api =>
 instance HasSwagger api =>
          HasSwagger (LoggingMod mod :> api) where
     toSwagger _ = toSwagger (Proxy @api)
+
+instance HasOpenApi api =>
+         HasOpenApi (LoggingMod mod :> api) where
+    toOpenApi _ = toOpenApi (Proxy @api)
 
 -- | Apply logging to the given server.
 serverWithLogging

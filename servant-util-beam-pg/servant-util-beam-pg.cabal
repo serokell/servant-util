@@ -1,10 +1,10 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.33.0.
+-- This file has been generated from package.yaml by hpack version 0.34.4.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 53c2a28480150f06472fa137b924f34b91980cd078c42d23359fa85ab8a01197
+-- hash: e734c4aee1dc9136894bc3145d050404331766af259b5323976b6903fb16dd29
 
 name:           servant-util-beam-pg
 version:        0.2
@@ -35,7 +35,39 @@ library
       Paths_servant_util_beam_pg
   hs-source-dirs:
       src
-  default-extensions: AllowAmbiguousTypes BangPatterns ConstraintKinds DataKinds DefaultSignatures DeriveDataTypeable DeriveGeneric EmptyCase FlexibleContexts FlexibleInstances FunctionalDependencies GADTs GeneralizedNewtypeDeriving LambdaCase MultiParamTypeClasses MultiWayIf NamedFieldPuns NoImplicitPrelude OverloadedStrings OverloadedLabels PatternSynonyms RankNTypes RecordWildCards ScopedTypeVariables StandaloneDeriving TemplateHaskell TupleSections TypeFamilies TypeOperators UndecidableInstances ViewPatterns TypeApplications
+  default-extensions:
+      AllowAmbiguousTypes
+      BangPatterns
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveDataTypeable
+      DeriveGeneric
+      EmptyCase
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      GeneralizedNewtypeDeriving
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedStrings
+      OverloadedLabels
+      PatternSynonyms
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      StandaloneDeriving
+      TemplateHaskell
+      TupleSections
+      TypeFamilies
+      TypeOperators
+      UndecidableInstances
+      ViewPatterns
+      TypeApplications
   ghc-options: -Wall
   build-depends:
       base >=4.7 && <5
@@ -57,7 +89,39 @@ executable servant-util-beam-pg-examples
       Paths_servant_util_beam_pg
   hs-source-dirs:
       examples
-  default-extensions: AllowAmbiguousTypes BangPatterns ConstraintKinds DataKinds DefaultSignatures DeriveDataTypeable DeriveGeneric EmptyCase FlexibleContexts FlexibleInstances FunctionalDependencies GADTs GeneralizedNewtypeDeriving LambdaCase MultiParamTypeClasses MultiWayIf NamedFieldPuns NoImplicitPrelude OverloadedStrings OverloadedLabels PatternSynonyms RankNTypes RecordWildCards ScopedTypeVariables StandaloneDeriving TemplateHaskell TupleSections TypeFamilies TypeOperators UndecidableInstances ViewPatterns TypeApplications
+  default-extensions:
+      AllowAmbiguousTypes
+      BangPatterns
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveDataTypeable
+      DeriveGeneric
+      EmptyCase
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      GeneralizedNewtypeDeriving
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedStrings
+      OverloadedLabels
+      PatternSynonyms
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      StandaloneDeriving
+      TemplateHaskell
+      TupleSections
+      TypeFamilies
+      TypeOperators
+      UndecidableInstances
+      ViewPatterns
+      TypeApplications
   ghc-options: -Wall -threaded -rtsopts -with-rtsopts=-N -O2
   build-depends:
       base >=4.7 && <5
@@ -82,7 +146,39 @@ test-suite servant-util-beam-pg-test
       Paths_servant_util_beam_pg
   hs-source-dirs:
       tests
-  default-extensions: AllowAmbiguousTypes BangPatterns ConstraintKinds DataKinds DefaultSignatures DeriveDataTypeable DeriveGeneric EmptyCase FlexibleContexts FlexibleInstances FunctionalDependencies GADTs GeneralizedNewtypeDeriving LambdaCase MultiParamTypeClasses MultiWayIf NamedFieldPuns NoImplicitPrelude OverloadedStrings OverloadedLabels PatternSynonyms RankNTypes RecordWildCards ScopedTypeVariables StandaloneDeriving TemplateHaskell TupleSections TypeFamilies TypeOperators UndecidableInstances ViewPatterns TypeApplications
+  default-extensions:
+      AllowAmbiguousTypes
+      BangPatterns
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveDataTypeable
+      DeriveGeneric
+      EmptyCase
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      GeneralizedNewtypeDeriving
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedStrings
+      OverloadedLabels
+      PatternSynonyms
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      StandaloneDeriving
+      TemplateHaskell
+      TupleSections
+      TypeFamilies
+      TypeOperators
+      UndecidableInstances
+      ViewPatterns
+      TypeApplications
   ghc-options: -Wall -threaded -rtsopts -with-rtsopts=-N
   build-tool-depends:
       hspec-discover:hspec-discover

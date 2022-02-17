@@ -10,11 +10,13 @@ module Servant.Util.Combinators.ErrorResponses
 import Universum
 
 import Control.Lens (at, (<>~), (?~))
+import qualified Data.OpenApi as O
 import qualified Data.Swagger as S
-import Data.Swagger.Declare (runDeclare)
+import qualified Data.Swagger.Declare as S (runDeclare)
 import GHC.TypeLits (KnownSymbol, Symbol)
 import Servant (HasServer (..), (:>))
 import Servant.Client (HasClient (..))
+import Servant.OpenApi (HasOpenApi (..))
 import Servant.Swagger (HasSwagger (..))
 
 import Servant.Util.Combinators.Logging
@@ -87,6 +89,7 @@ instance HasLoggingServer config lcontext subApi ctx =>
     routeWithLog = inRouteServer @(ErrorResponses errors :> LoggingApiRec config lcontext subApi) route id
 
 
+-- Swagger instances
 class KnownErrorCodes (errors :: [ErrorDesc]) where
     errorCodesToSwagger :: S.Swagger -> S.Swagger
 
@@ -102,7 +105,7 @@ instance (KnownNat code, KnownSymbol desc, S.ToSchema exc, KnownErrorCodes es) =
       where
         code = fromIntegral (natVal @code Proxy)
         desc = symbolValT @desc
-        (defs, excSchema) = runDeclare (S.declareSchemaRef (Proxy @exc)) mempty
+        (defs, excSchema) = S.runDeclare (S.declareSchemaRef (Proxy @exc)) mempty
         response = mempty
             & S.description .~ desc
             & S.schema ?~ excSchema
@@ -111,6 +114,30 @@ instance ( HasSwagger subApi
          , KnownErrorCodes errors
          ) => HasSwagger (ErrorResponses errors :> subApi) where
     toSwagger _ = toSwagger (Proxy @subApi) & errorCodesToSwagger @errors
+
+-- OpenApi instances
+class KnownErrorCodesOpenApi (errors :: [ErrorDesc]) where
+    errorCodesToOpenApi :: O.OpenApi -> O.OpenApi
+
+instance KnownErrorCodesOpenApi '[] where
+    errorCodesToOpenApi = id
+
+instance (KnownNat code, KnownSymbol desc, O.ToSchema exc, KnownErrorCodesOpenApi es) =>
+         KnownErrorCodesOpenApi ('ErrorDesc code exc desc ': es) where
+    -- In the absence of a media type we cannot insert a response schema.
+    errorCodesToOpenApi openapi = openapi
+        & O.allOperations . O.responses . O.responses . at code ?~ O.Inline response
+        & errorCodesToOpenApi @es
+      where
+        code = fromIntegral (natVal @code Proxy)
+        desc = symbolValT @desc
+        response = mempty
+            & O.description .~ desc
+
+instance ( HasOpenApi subApi
+         , KnownErrorCodesOpenApi errors
+         ) => HasOpenApi (ErrorResponses errors :> subApi) where
+    toOpenApi _ = toOpenApi (Proxy @subApi) & errorCodesToOpenApi @errors
 
 ---------------------------------------------------------------------------
 -- Helpers

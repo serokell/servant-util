@@ -6,12 +6,14 @@ import Universum
 
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.TH as Aeson
-import Data.Swagger (ToSchema)
+import qualified Data.OpenApi as O (ToSchema)
+import qualified Data.Swagger as S (ToSchema)
 import Data.Time.Calendar.OrdinalDate (fromOrdinalDate)
 import Data.Time.Clock (UTCTime (..))
 import Servant.API (Get, JSON, (:>))
 import Servant.API.Generic (ToServantApi, (:-))
 import Servant.Server.Generic (AsServer)
+import Servant.OpenApi (toOpenApi)
 import Servant.Swagger (toSwagger)
 
 import Test.Hspec (Spec, aroundAll, describe, it)
@@ -28,7 +30,8 @@ import Test.Servant.Helpers
 newtype Isbn = Isbn Word64
   deriving (Show, Eq, Ord, Generic)
 
-instance ToSchema Isbn
+instance O.ToSchema Isbn
+instance S.ToSchema Isbn
 
 Aeson.deriveJSON Aeson.defaultOptions ''Isbn
 
@@ -39,7 +42,8 @@ data Book = Book
   , createdAt :: UTCTime
   } deriving (Show, Eq, Generic)
 
-instance ToSchema Book
+instance O.ToSchema Book
+instance S.ToSchema Book
 
 Aeson.deriveJSON Aeson.defaultOptions ''Book
 
@@ -119,6 +123,16 @@ printFilterSwagger =
   writeFile "filter-test-swagger.json" $
     decodeUtf8 . Aeson.encode $
     toSwagger $ Proxy @(ToServantApi ApiMethods)
+
+-- OpenApi
+---------------------------------------------------------------------------
+
+-- You can try this with ghci
+printFilterOpenApi :: IO ()
+printFilterOpenApi =
+  writeFile "filter-test-openapi.json" $
+    decodeUtf8 . Aeson.encode $
+    toOpenApi $ Proxy @(ToServantApi ApiMethods)
 
 -- Tests
 ---------------------------------------------------------------------------

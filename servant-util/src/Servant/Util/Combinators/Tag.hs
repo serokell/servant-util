@@ -8,10 +8,12 @@ import Universum
 
 import Control.Lens (at, (?~))
 import qualified Data.HashSet.InsOrd as HS
+import qualified Data.OpenApi as O
 import qualified Data.Swagger as S
 import GHC.TypeLits (ErrorMessage (..), KnownSymbol, Symbol, TypeError)
 import Servant (HasServer (..), StdMethod, Verb, (:<|>), (:>))
 import Servant.Client (HasClient (..))
+import Servant.OpenApi (HasOpenApi (..))
 import Servant.Swagger (HasSwagger (..))
 
 import Servant.Util.Combinators.Logging
@@ -35,10 +37,19 @@ instance HasLoggingServer config lcontext subApi ctx =>
          HasLoggingServer config lcontext (Tag name :> subApi) ctx where
     routeWithLog = inRouteServer @(Tag name :> LoggingApiRec config lcontext subApi) route id
 
+-- Swagger instance
 instance (HasSwagger subApi, KnownSymbol name) =>
          HasSwagger (Tag name :> subApi) where
     toSwagger _ = toSwagger (Proxy @subApi)
         & S.allOperations . S.tags . at name ?~ ()
+      where
+        name = symbolValT @name
+
+-- OpenApi instance
+instance (HasOpenApi subApi, KnownSymbol name) =>
+         HasOpenApi (Tag name :> subApi) where
+    toOpenApi _ = toOpenApi (Proxy @subApi)
+        & O.allOperations . O.tags . at name ?~ ()
       where
         name = symbolValT @name
 
@@ -82,6 +93,7 @@ type family AllApiTags api :: [Symbol] where
     AllApiTags (api1 :<|> api2) = AllApiTags api1 `UnionSorted` AllApiTags api2
     AllApiTags (Verb (method :: StdMethod) (code :: Nat) ctx a) = '[]
 
+-- Swagger instances
 -- | Extract tags defined by this mapping.
 class ReifyTagsFromMapping (mapping :: [TyNamedParam Symbol]) where
     reifyTagsFromMapping :: HS.InsOrdHashSet S.Tag
@@ -125,3 +137,48 @@ instance ( HasSwagger api
          HasSwagger (TagDescriptions 'VerifyTags mapping :> api) where
     toSwagger _ = toSwagger (Proxy @api)
         & S.tags .~ reifyTagsFromMapping @mapping
+
+-- OpenApi instances
+-- | Extract tags defined by this mapping.
+class ReifyTagsFromMapping' (mapping :: [TyNamedParam Symbol]) where
+    reifyTagsFromMapping' :: HS.InsOrdHashSet O.Tag
+
+instance ReifyTagsFromMapping' '[] where
+    reifyTagsFromMapping' = mempty
+
+instance ( KnownSymbol name, KnownSymbol desc
+         , ReifyTagsFromMapping' mapping
+         , ParamsContainNoName mapping name
+         ) =>
+         ReifyTagsFromMapping' ('TyNamedParam name desc ': mapping) where
+    reifyTagsFromMapping' =
+        O.Tag
+        { O._tagName = symbolValT @name
+        , O._tagDescription = Just $ symbolValT @desc
+        , O._tagExternalDocs = Nothing
+        } `HS.insert` reifyTagsFromMapping' @mapping
+
+instance ( HasOpenApi api
+         , ReifyTagsFromMapping' mapping
+         ) =>
+         HasOpenApi (TagDescriptions 'NoVerifyTags mapping :> api) where
+    toOpenApi _ = toOpenApi (Proxy @api)
+        & O.tags .~ reifyTagsFromMapping' @mapping
+
+instance ( HasOpenApi api
+         , ReifyTagsFromMapping' mapping
+         , missingMapping ~ (AllApiTags api // TyNamedParamsNames mapping)
+         , If (missingMapping == '[])
+            (() :: Constraint)
+            (TypeError ('Text "Following tags have no mapping specified in \
+                        \TagDescriptions: " ':<>: 'ShowType missingMapping))
+         , extraMapping ~ (TyNamedParamsNames mapping // AllApiTags api)
+         , If (extraMapping == '[])
+            (() :: Constraint)
+            (TypeError ('Text "Mappings for the following names specified in \
+                              \TagDescriptions are unused: "
+                        ':<>: 'ShowType extraMapping))
+         ) =>
+         HasOpenApi (TagDescriptions 'VerifyTags mapping :> api) where
+    toOpenApi _ = toOpenApi (Proxy @api)
+        & O.tags .~ reifyTagsFromMapping' @mapping
