@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# LANGUAGE CPP #-}
 
 module Servant.Util.Combinators.Filtering.Client () where
 
@@ -13,6 +14,10 @@ import Servant.Client.Core.Request (Request, appendToQueryString)
 import Servant.Util.Combinators.Filtering.Base
 import Servant.Util.Combinators.Filtering.Support ()
 import Servant.Util.Common
+
+#if MIN_VERSION_servant(0,19,0)
+import qualified Data.Text.Encoding as T
+#endif
 
 -------------------------------------------------------------------------
 -- Client
@@ -41,7 +46,11 @@ instance ( KnownSymbol name
     someFilterToReq SomeFilter{..}
         | symbolValT @name == sfName =
             let filter :: TypeFilter fk a = cast sfFilter ?: error "Failed to cast filter"
+#if MIN_VERSION_servant(0,19,0)
+                (op, value) = T.encodeUtf8 <$> typeFilterToReq filter
+#else
                 (op, value) = typeFilterToReq filter
+#endif
                 keymod = if op == DefFilteringCmd then "" else "[" <> op <> "]"
                 key = sfName <> keymod
             in appendToQueryString key (Just value)
