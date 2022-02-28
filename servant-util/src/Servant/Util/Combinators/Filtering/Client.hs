@@ -16,7 +16,12 @@ import Servant.Util.Combinators.Filtering.Support ()
 import Servant.Util.Common
 
 #if MIN_VERSION_servant(0,19,0)
-import qualified Data.Text.Encoding as T
+import Data.ByteString (ByteString)
+import Data.ByteString.Builder (toLazyByteString)
+import qualified Data.ByteString.Lazy as BL
+
+encodeQueryParam :: ToHttpApiData a => a  -> ByteString
+encodeQueryParam = BL.toStrict . toLazyByteString . toEncodedUrlPiece
 #endif
 
 -------------------------------------------------------------------------
@@ -47,7 +52,7 @@ instance ( KnownSymbol name
         | symbolValT @name == sfName =
             let filter :: TypeFilter fk a = cast sfFilter ?: error "Failed to cast filter"
 #if MIN_VERSION_servant(0,19,0)
-                (op, value) = T.encodeUtf8 <$> typeFilterToReq filter
+                (op, value) = encodeQueryParam <$> typeFilterToReq filter
 #else
                 (op, value) = typeFilterToReq filter
 #endif

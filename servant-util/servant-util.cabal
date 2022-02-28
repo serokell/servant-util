@@ -111,6 +111,7 @@ library
       QuickCheck
     , aeson
     , base >=4.7 && <5
+    , bytestring
     , constraints
     , containers
     , data-default
