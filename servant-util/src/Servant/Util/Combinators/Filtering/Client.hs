@@ -16,7 +16,6 @@ import Servant.Util.Combinators.Filtering.Support ()
 import Servant.Util.Common
 
 #if MIN_VERSION_servant(0,19,0)
-import Data.ByteString (ByteString)
 import Data.ByteString.Builder (toLazyByteString)
 import qualified Data.ByteString.Lazy as BL
 
