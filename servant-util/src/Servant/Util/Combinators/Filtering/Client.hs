@@ -1,5 +1,4 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-{-# LANGUAGE CPP #-}
 
 module Servant.Util.Combinators.Filtering.Client () where
 
@@ -7,7 +6,7 @@ import Universum hiding (filter)
 
 import Data.Typeable (cast)
 import GHC.TypeLits (KnownSymbol)
-import Servant (ToHttpApiData (..), toQueryParam, (:>))
+import Servant (ToHttpApiData (..), (:>))
 import Servant.Client (HasClient (..))
 import Servant.Client.Core.Request (Request, appendToQueryString)
 
@@ -15,23 +14,15 @@ import Servant.Util.Combinators.Filtering.Base
 import Servant.Util.Combinators.Filtering.Support ()
 import Servant.Util.Common
 
-#if MIN_VERSION_servant(0,19,0)
-import Data.ByteString.Builder (toLazyByteString)
-import qualified Data.ByteString.Lazy as BL
-
-encodeQueryParam :: ToHttpApiData a => a  -> ByteString
-encodeQueryParam = BL.toStrict . toLazyByteString . toEncodedUrlPiece
-#endif
-
 -------------------------------------------------------------------------
 -- Client
 -------------------------------------------------------------------------
 
 -- | For given filter return operation name and encoded value.
-typeFilterToReq :: ToHttpApiData a => TypeFilter fk a -> (Text, Text)
+typeFilterToReq :: ToHttpApiData a => TypeFilter fk a -> (Text, EncodedQueryParam)
 typeFilterToReq = \case
     TypeAutoFilter (SomeTypeAutoFilter filter) -> autoFilterEncode filter
-    TypeManualFilter val                       -> (DefFilteringCmd, toQueryParam val)
+    TypeManualFilter val                       -> (DefFilteringCmd, encodeQueryParam val)
 
 -- | Apply filter to a client request being built.
 class SomeFilterToReq params where
@@ -50,11 +41,7 @@ instance ( KnownSymbol name
     someFilterToReq SomeFilter{..}
         | symbolValT @name == sfName =
             let filter :: TypeFilter fk a = cast sfFilter ?: error "Failed to cast filter"
-#if MIN_VERSION_servant(0,19,0)
-                (op, value) = encodeQueryParam <$> typeFilterToReq filter
-#else
                 (op, value) = typeFilterToReq filter
-#endif
                 keymod = if op == DefFilteringCmd then "" else "[" <> op <> "]"
                 key = sfName <> keymod
             in appendToQueryString key (Just value)
