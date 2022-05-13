@@ -1,6 +1,11 @@
 Unreleased
 =====
 
+0.3
+===
+
+* Added support for `openapi3` by implementing necessary instances.
+
 0.2
 =====
 
