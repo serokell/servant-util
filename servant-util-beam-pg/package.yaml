@@ -13,7 +13,7 @@ dependencies:
 - servant-client
 - servant-client-core
 - servant-server
-- servant-util >= 0.1.0 && < 0.2
+- servant-util >= 0.1.0 && < 0.4
 - text
 - universum
 
