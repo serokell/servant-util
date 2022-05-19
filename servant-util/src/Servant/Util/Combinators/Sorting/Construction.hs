@@ -11,7 +11,8 @@ module Servant.Util.Combinators.Sorting.Construction
 import Universum
 
 import Data.Default (Default (..))
-import GHC.Exts (IsList (..))
+import qualified GHC.Exts
+import GHC.Exts (IsList)
 import GHC.TypeLits (ErrorMessage (..), KnownSymbol, Symbol, TypeError)
 
 import Servant.Util.Combinators.Sorting.Base
@@ -79,7 +80,7 @@ sortingSpec = mkSortingSpec [asc #id]
 mkSortingSpec
     :: ReifySortingItems base
     => [SortingRequestItem provided] -> SortingSpec provided base
-mkSortingSpec = fromList
+mkSortingSpec = GHC.Exts.fromList
 
 -- | By default 'noSorting' is used.
 instance ReifySortingItems base => Default (SortingSpec provided base) where
