@@ -1,13 +1,13 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.34.4.
+-- This file has been generated from package.yaml by hpack version 0.33.0.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: e734c4aee1dc9136894bc3145d050404331766af259b5323976b6903fb16dd29
+-- hash: da091e89b5283b93f121291686274f3183b3b5a629c0a94d810b1c499e58f4aa
 
 name:           servant-util-beam-pg
-version:        0.2
+version:        0.3
 synopsis:       Implementation of servant-util primitives for beam-postgres.
 category:       Servant, Web, Database
 homepage:       https://github.com/serokell/servant-util#readme
@@ -35,39 +35,7 @@ library
       Paths_servant_util_beam_pg
   hs-source-dirs:
       src
-  default-extensions:
-      AllowAmbiguousTypes
-      BangPatterns
-      ConstraintKinds
-      DataKinds
-      DefaultSignatures
-      DeriveDataTypeable
-      DeriveGeneric
-      EmptyCase
-      FlexibleContexts
-      FlexibleInstances
-      FunctionalDependencies
-      GADTs
-      GeneralizedNewtypeDeriving
-      LambdaCase
-      MultiParamTypeClasses
-      MultiWayIf
-      NamedFieldPuns
-      NoImplicitPrelude
-      OverloadedStrings
-      OverloadedLabels
-      PatternSynonyms
-      RankNTypes
-      RecordWildCards
-      ScopedTypeVariables
-      StandaloneDeriving
-      TemplateHaskell
-      TupleSections
-      TypeFamilies
-      TypeOperators
-      UndecidableInstances
-      ViewPatterns
-      TypeApplications
+  default-extensions: AllowAmbiguousTypes BangPatterns ConstraintKinds DataKinds DefaultSignatures DeriveDataTypeable DeriveGeneric EmptyCase FlexibleContexts FlexibleInstances FunctionalDependencies GADTs GeneralizedNewtypeDeriving LambdaCase MultiParamTypeClasses MultiWayIf NamedFieldPuns NoImplicitPrelude OverloadedStrings OverloadedLabels PatternSynonyms RankNTypes RecordWildCards ScopedTypeVariables StandaloneDeriving TemplateHaskell TupleSections TypeFamilies TypeOperators UndecidableInstances ViewPatterns TypeApplications
   ghc-options: -Wall
   build-depends:
       base >=4.7 && <5
@@ -78,7 +46,7 @@ library
     , servant-client
     , servant-client-core
     , servant-server
-    , servant-util >=0.1.0 && <0.2
+    , servant-util >=0.1.0 && <0.4
     , text
     , universum
   default-language: Haskell2010
@@ -89,39 +57,7 @@ executable servant-util-beam-pg-examples
       Paths_servant_util_beam_pg
   hs-source-dirs:
       examples
-  default-extensions:
-      AllowAmbiguousTypes
-      BangPatterns
-      ConstraintKinds
-      DataKinds
-      DefaultSignatures
-      DeriveDataTypeable
-      DeriveGeneric
-      EmptyCase
-      FlexibleContexts
-      FlexibleInstances
-      FunctionalDependencies
-      GADTs
-      GeneralizedNewtypeDeriving
-      LambdaCase
-      MultiParamTypeClasses
-      MultiWayIf
-      NamedFieldPuns
-      NoImplicitPrelude
-      OverloadedStrings
-      OverloadedLabels
-      PatternSynonyms
-      RankNTypes
-      RecordWildCards
-      ScopedTypeVariables
-      StandaloneDeriving
-      TemplateHaskell
-      TupleSections
-      TypeFamilies
-      TypeOperators
-      UndecidableInstances
-      ViewPatterns
-      TypeApplications
+  default-extensions: AllowAmbiguousTypes BangPatterns ConstraintKinds DataKinds DefaultSignatures DeriveDataTypeable DeriveGeneric EmptyCase FlexibleContexts FlexibleInstances FunctionalDependencies GADTs GeneralizedNewtypeDeriving LambdaCase MultiParamTypeClasses MultiWayIf NamedFieldPuns NoImplicitPrelude OverloadedStrings OverloadedLabels PatternSynonyms RankNTypes RecordWildCards ScopedTypeVariables StandaloneDeriving TemplateHaskell TupleSections TypeFamilies TypeOperators UndecidableInstances ViewPatterns TypeApplications
   ghc-options: -Wall -threaded -rtsopts -with-rtsopts=-N -O2
   build-depends:
       base >=4.7 && <5
@@ -132,7 +68,7 @@ executable servant-util-beam-pg-examples
     , servant-client
     , servant-client-core
     , servant-server
-    , servant-util >=0.1.0 && <0.2
+    , servant-util >=0.1.0 && <0.4
     , text
     , universum
   default-language: Haskell2010
@@ -146,39 +82,7 @@ test-suite servant-util-beam-pg-test
       Paths_servant_util_beam_pg
   hs-source-dirs:
       tests
-  default-extensions:
-      AllowAmbiguousTypes
-      BangPatterns
-      ConstraintKinds
-      DataKinds
-      DefaultSignatures
-      DeriveDataTypeable
-      DeriveGeneric
-      EmptyCase
-      FlexibleContexts
-      FlexibleInstances
-      FunctionalDependencies
-      GADTs
-      GeneralizedNewtypeDeriving
-      LambdaCase
-      MultiParamTypeClasses
-      MultiWayIf
-      NamedFieldPuns
-      NoImplicitPrelude
-      OverloadedStrings
-      OverloadedLabels
-      PatternSynonyms
-      RankNTypes
-      RecordWildCards
-      ScopedTypeVariables
-      StandaloneDeriving
-      TemplateHaskell
-      TupleSections
-      TypeFamilies
-      TypeOperators
-      UndecidableInstances
-      ViewPatterns
-      TypeApplications
+  default-extensions: AllowAmbiguousTypes BangPatterns ConstraintKinds DataKinds DefaultSignatures DeriveDataTypeable DeriveGeneric EmptyCase FlexibleContexts FlexibleInstances FunctionalDependencies GADTs GeneralizedNewtypeDeriving LambdaCase MultiParamTypeClasses MultiWayIf NamedFieldPuns NoImplicitPrelude OverloadedStrings OverloadedLabels PatternSynonyms RankNTypes RecordWildCards ScopedTypeVariables StandaloneDeriving TemplateHaskell TupleSections TypeFamilies TypeOperators UndecidableInstances ViewPatterns TypeApplications
   ghc-options: -Wall -threaded -rtsopts -with-rtsopts=-N
   build-tool-depends:
       hspec-discover:hspec-discover
@@ -193,7 +97,7 @@ test-suite servant-util-beam-pg-test
     , servant-client
     , servant-client-core
     , servant-server
-    , servant-util >=0.1.0 && <0.2
+    , servant-util >=0.1.0 && <0.4
     , servant-util-beam-pg
     , text
     , universum
