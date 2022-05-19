@@ -78,10 +78,10 @@ For example, `GetBooks` from the example above can be extended as
 ```haskell
 
 type GetBooks
-    :> SortingParams
+    =  SortingParams
          ["isbn" ?: Isbn, "name" ?: Text, "author" ?: Text]
         '["isbn" ?: 'Asc Isbn]
-    =  Get '[JSON] [Book]
+    :> Get '[JSON] [Book]
 
 ```
 
@@ -134,8 +134,8 @@ type instance SortingParamProvidedOf Book =
     ["isbn" ?: Asc Isbn]
 
 type GetBooks
-    :> SortingParamsOf Book  -- same as the definition at the section's top
-    =  Get '[JSON] [Book]
+    =  SortingParamsOf Book  -- same as the definition at the section's top
+    :> Get '[JSON] [Book]
 
 ```
 
@@ -157,8 +157,8 @@ Let's consider filters on the previous example. Your API should be extended with
 ```haskell
 
 type GetBooks
-    :> FilteringParams ["isbn" ?: 'AutoFilter Isbn, "name" ?: 'AutoFilter Text]
-    =  Get '[JSON] [Book]
+    =  FilteringParams ["isbn" ?: 'AutoFilter Isbn, "name" ?: 'AutoFilter Text]
+    :> Get '[JSON] [Book]
 
 ```
 
@@ -196,8 +196,8 @@ your own filter or use a manual one; let's demonstrate the latter case:
 ```haskell
 
 type GetBooks
-    :> FilteringParams ["hasLongName" ?: ManualFilter Bool]
-    =  Get '[JSON] [Book]
+    =  FilteringParams ["hasLongName" ?: ManualFilter Bool]
+    :> Get '[JSON] [Book]
 
 ```
 
@@ -244,8 +244,8 @@ import Servant.Util (PaginationParams, PaginationSpec)
 import Servant.Util.Dummy (paginate)
 
 type GetBooks
-    :> PaginationParams
-    =  Get '[JSON] [Book]
+    =  PaginationParams
+    :> Get '[JSON] [Book]
 
 getBooks :: ToServer GetBooks
 getBooks pagination = paginate pagination <$> getAllBooks
