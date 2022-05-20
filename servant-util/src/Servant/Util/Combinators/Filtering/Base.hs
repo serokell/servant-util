@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP           #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE TypeInType    #-}
 
@@ -20,8 +21,10 @@ module Servant.Util.Combinators.Filtering.Base
     , AreAutoFilters (..)
     , FilteringValueParser (..)
     , OpsDescriptions
+    , EncodedQueryParam
     , parseFilteringValueAsIs
     , unsupportedFilteringValue
+    , encodeQueryParam
     , autoFiltersParsers
 
     , FilteringParamTypesOf
@@ -37,6 +40,10 @@ import Fmt (Buildable (..), Builder)
 import GHC.Exts (IsList)
 import Servant (FromHttpApiData (..), ToHttpApiData (..))
 import Servant.API (NoContent)
+#if MIN_VERSION_servant(0,19,0)
+import Data.ByteString.Builder (toLazyByteString)
+import qualified Data.ByteString.Lazy as BL
+#endif
 
 import Servant.Util.Common
 
@@ -90,6 +97,18 @@ unsupportedFilteringValue errMsg = FilteringValueParser (\_ -> Left errMsg)
 -- This is not a 'Map' to prevent developer-defined entries order.
 type OpsDescriptions = [(Text, Text)]
 
+-- | Specify the encoding type and function for query parameters.
+-- It's required due to this https://github.com/haskell-servant/servant/pull/1432
+#if MIN_VERSION_servant(0,19,0)
+type EncodedQueryParam = ByteString
+encodeQueryParam :: ToHttpApiData a => a  -> EncodedQueryParam
+encodeQueryParam = BL.toStrict . toLazyByteString . toEncodedUrlPiece
+#else
+type EncodedQueryParam = Text
+encodeQueryParam :: ToHttpApiData a => a  -> EncodedQueryParam
+encodeQueryParam = toQueryParam
+#endif
+
 -- | How auto filters appear in logging.
 class BuildableAutoFilter (filter :: Type -> Type) where
     buildAutoFilter
@@ -112,7 +131,7 @@ class (Typeable filter, BuildableAutoFilter filter) =>
     -- | Encode a filter to query parameter value.
     autoFilterEncode
         :: ToHttpApiData a
-        => filter a -> (Text, Text)
+        => filter a -> (Text, EncodedQueryParam)
 
     mapAutoFilterValue
         :: (a -> b) -> filter a -> filter b

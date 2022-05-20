@@ -1,0 +1,3 @@
+packages:
+  ./servant-util
+  ./servant-util-beam-pg

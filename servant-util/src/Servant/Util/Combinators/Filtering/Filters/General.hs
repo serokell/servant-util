@@ -10,7 +10,7 @@ import Universum
 import qualified Data.Map as M
 import qualified Data.Text as T
 import Fmt (build, listF)
-import Servant (FromHttpApiData (..), ToHttpApiData (..))
+import Servant (FromHttpApiData (..))
 
 import Servant.Util.Combinators.Filtering.Base
 
@@ -57,10 +57,12 @@ instance IsAutoFilter FilterMatching where
             mapM parseUrlPiece vals
 
     autoFilterEncode = \case
-        FilterMatching v    -> (DefFilteringCmd, toQueryParam v)
-        FilterNotMatching v -> ("neq", toQueryParam v)
-        FilterItemsIn vs    -> ("in", "[" <> T.intercalate "," (map toQueryParam vs) <> "]")
-
+        FilterMatching v    -> (DefFilteringCmd, encodeQueryParam v)
+        FilterNotMatching v -> ("neq", encodeQueryParam v)
+        FilterItemsIn vs    -> ("in", encodeFilterItems vs)
+      where
+        encodeFilterItems vs =
+            "[" <> mconcat (intersperse "," $ map encodeQueryParam vs) <> "]"
 
 -- | Support for @(<)@, @(>)@, @(<=)@ and @(>=)@ operations.
 data FilterComparing a
@@ -101,10 +103,10 @@ instance IsAutoFilter FilterComparing where
         ]
 
     autoFilterEncode = \case
-        FilterGT v  -> ("gt", toQueryParam v)
-        FilterLT v  -> ("lt", toQueryParam v)
-        FilterGTE v -> ("gte", toQueryParam v)
-        FilterLTE v -> ("lte", toQueryParam v)
+        FilterGT v  -> ("gt", encodeQueryParam v)
+        FilterLT v  -> ("lt", encodeQueryParam v)
+        FilterGTE v -> ("gte", encodeQueryParam v)
+        FilterLTE v -> ("lte", encodeQueryParam v)
 
 
 -------------------------------------------------------------------------

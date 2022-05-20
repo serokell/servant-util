@@ -15,7 +15,7 @@ import Universum
 import qualified Data.Map as M
 import qualified Data.Text.Lazy as LT
 import Fmt (Buildable (..), (+|), (|+))
-import Servant (FromHttpApiData (..), ToHttpApiData (..))
+import Servant (FromHttpApiData (..))
 import System.Console.Pretty (Color (..), Style (..), color, style)
 
 import Servant.Util.Combinators.Filtering.Base
@@ -117,6 +117,6 @@ instance IsAutoFilter FilterLike where
     autoFilterEncode = \case
         FilterLike cs (unLikePattern -> pat)
             | CaseSensitivity True <- cs
-                -> ("like", toQueryParam pat)
+                -> ("like", encodeQueryParam pat)
             | otherwise
-                -> ("ilike", toQueryParam pat)
+                -> ("ilike", encodeQueryParam pat)

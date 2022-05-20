@@ -1,6 +1,8 @@
 Unreleased
 =====
 
+* Added support for building the project with `servant` version >= 0.19.
+
 0.3
 ===
 
