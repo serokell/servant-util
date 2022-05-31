@@ -1,6 +1,7 @@
 Unreleased
 =====
 
+* Replaced `mapAutoFilterValue` in `IsAutoFilter` typeclass with `Functor` superclass.
 * Exposed `MkSomeFilter` constraint.
 * Added support for building the project with `servant` version >= 0.19.
 

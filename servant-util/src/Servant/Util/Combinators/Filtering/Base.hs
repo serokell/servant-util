@@ -115,7 +115,7 @@ class BuildableAutoFilter (filter :: Type -> Type) where
         :: Buildable a => Text -> filter a -> Builder
 
 -- | Application of a filter type to Servant API.
-class (Typeable filter, BuildableAutoFilter filter) =>
+class (Typeable filter, Functor filter, BuildableAutoFilter filter) =>
       IsAutoFilter (filter :: Type -> Type) where
 
     -- | For each supported filtering operation specifies a short plain-english
@@ -132,12 +132,6 @@ class (Typeable filter, BuildableAutoFilter filter) =>
     autoFilterEncode
         :: ToHttpApiData a
         => filter a -> (Text, EncodedQueryParam)
-
-    mapAutoFilterValue
-        :: (a -> b) -> filter a -> filter b
-    default mapAutoFilterValue
-        :: Functor filter => (a -> b) -> filter a -> filter b
-    mapAutoFilterValue = fmap
 
 -- | Multi-version of 'IsFilter'.
 class AreAutoFilters (filters :: [Type -> Type]) where
@@ -171,7 +165,7 @@ data SomeTypeAutoFilter a =
     forall filter. IsAutoFilter filter => SomeTypeAutoFilter (filter a)
 
 instance Functor SomeTypeAutoFilter where
-    fmap f (SomeTypeAutoFilter filtr) = SomeTypeAutoFilter (mapAutoFilterValue f filtr)
+    fmap f (SomeTypeAutoFilter filtr) = SomeTypeAutoFilter (fmap f filtr)
 
 instance Buildable a => Buildable (Text, SomeTypeAutoFilter a) where
     build (name, SomeTypeAutoFilter f) = buildAutoFilter name f
