@@ -1,6 +1,7 @@
 Unreleased
 =====
 
+* Exposed `MkSomeFilter` constraint.
 * Added support for building the project with `servant` version >= 0.19.
 
 0.3
