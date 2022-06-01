@@ -7,6 +7,8 @@
 module Servant.Util.Combinators.Filtering.Construction
     ( noFilters
     , mkFilteringSpec
+
+    , MkSomeFilter
     , (?/)
     , (?/=)
     , (?/<)
@@ -90,33 +92,39 @@ instance (filter ~ a) => MkTypeFilter filter 'ManualFilter a where
     mkTypeFilter = TypeManualFilter
 
 -- | Safely construct 'SomeFilter'.
-class MkSomeFilter name filter (origParams :: [TyNamedFilter]) (params :: [TyNamedFilter]) where
+class MkSomeFilter' name filter (origParams :: [TyNamedFilter]) (params :: [TyNamedFilter]) where
     mkSomeFilter :: filter -> SomeFilter params
 
 instance TypeError ('Text "Unknown filter " ':<>: 'ShowType name ':$$:
                     'Text "Allowed ones here: " ':<>: 'ShowType (TyNamedParamsNames origParams)) =>
-         MkSomeFilter name filter origParams '[] where
+         MkSomeFilter' name filter origParams '[] where
     mkSomeFilter = error ":shrug:"
 
 instance {-# OVERLAPPING #-}
          (MkTypeFilter filter fk a, KnownSymbol name, Typeable fk, Typeable a) =>
-         MkSomeFilter name filter origParams ('TyNamedParam name (fk a) ': params) where
+         MkSomeFilter' name filter origParams ('TyNamedParam name (fk a) ': params) where
     mkSomeFilter filter =
         SomeFilter
         { sfName = symbolValT @name
         , sfFilter = mkTypeFilter @filter @fk @a filter
         }
 
-instance MkSomeFilter name filter origParams params =>
-         MkSomeFilter name filter origParams (param ': params) where
+instance MkSomeFilter' name filter origParams params =>
+         MkSomeFilter' name filter origParams (param ': params) where
     mkSomeFilter filter = coerce $ mkSomeFilter @name @filter @origParams @params filter
+
+-- | A constraint required by smart filter constructors based on '?/' operator.
+--
+-- This constraint is satisfied when @SomeFilter params@ allows a filter of type
+-- @filter@ under the name @name@.
+type MkSomeFilter name filter params = MkSomeFilter' name filter params params
 
 -- | "Filter by" operation.
 -- Wraps a filter corresponding to the given name into 'SomeFilter' which can later be
 -- passed to 'mkSomeFilter'.
 (?/)
     :: forall name params filter.
-       MkSomeFilter name filter params params
+       MkSomeFilter name filter params
     => NameLabel name -> filter -> SomeFilter params
 (?/) _ = mkSomeFilter @name @_ @params
 infixr 0 ?/
@@ -124,7 +132,7 @@ infixr 0 ?/
 -- | "Filter by matching" operation.
 (?/=)
     :: forall name params filter.
-       MkSomeFilter name (FilterMatching filter) params params
+       MkSomeFilter name (FilterMatching filter) params
     => NameLabel name -> filter -> SomeFilter params
 l ?/= f = l ?/ FilterMatching f
 infixr 0 ?/=
@@ -132,7 +140,7 @@ infixr 0 ?/=
 -- | Make a comparing filter.
 (?/>), (?/<), (?/>=), (?/<=)
     :: forall name params filter.
-       MkSomeFilter name (FilterComparing filter) params params
+       MkSomeFilter name (FilterComparing filter) params
     => NameLabel name -> filter -> SomeFilter params
 l ?/> f = l ?/ FilterGT f
 l ?/< f = l ?/ FilterLT f
@@ -146,7 +154,7 @@ infixr 0 ?/<=
 -- | Make a simple POSIX regex filter.
 textLike
     :: forall name params text.
-       (MkSomeFilter name (FilterLike text) params params, HasCallStack)
+       (MkSomeFilter name (FilterLike text) params, HasCallStack)
     => NameLabel name -> LText -> SomeFilter params
 l `textLike` p = l ?/ FilterLike @text (CaseSensitivity True) (mkLikePatternUnsafe p)
 infixr 0 `textLike`
@@ -154,7 +162,7 @@ infixr 0 `textLike`
 -- | Make a simple POSIX regex case-insensitive filter.
 textILike
     :: forall name params text.
-       (MkSomeFilter name (FilterLike text) params params, HasCallStack)
+       (MkSomeFilter name (FilterLike text) params, HasCallStack)
     => NameLabel name -> LText -> SomeFilter params
 l `textILike` p = l ?/ FilterLike @text (CaseSensitivity False) (mkLikePatternUnsafe p)
 infixr 0 `textILike`
@@ -162,7 +170,7 @@ infixr 0 `textILike`
 -- | Make a filter that checks whether the given text is included.
 textContains
     :: forall name params text.
-       MkSomeFilter name (FilterLike text) params params
+       MkSomeFilter name (FilterLike text) params
     => NameLabel name -> Text -> SomeFilter params
 l `textContains` p = l ?/ filterContains @text (CaseSensitivity True) p
 infixr 0 `textContains`
@@ -171,7 +179,7 @@ infixr 0 `textContains`
 -- case-insensitive.
 textIContains
     :: forall name params text.
-       MkSomeFilter name (FilterLike text) params params
+       MkSomeFilter name (FilterLike text) params
     => NameLabel name -> Text -> SomeFilter params
 l `textIContains` p = l ?/ filterContains @text (CaseSensitivity False) p
 infixr 0 `textIContains`
@@ -180,7 +188,7 @@ infixr 0 `textIContains`
 -- Helpful when newtypes are heavely used in API parameters.
 (?/~)
     :: forall name filter' params filter.
-       (MkSomeFilter name filter' params params, Coercible filter filter')
+       (MkSomeFilter name filter' params, Coercible filter filter')
     => NameLabel name -> filter -> SomeFilter params
 l ?/~ f = l ?/ coerce @_ @filter' f
 
