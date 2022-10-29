@@ -1,13 +1,11 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.34.6.
+-- This file has been generated from package.yaml by hpack version 0.34.4.
 --
 -- see: https://github.com/sol/hpack
---
--- hash: 16c019b25a3f668898f483828ea8a0de802a4155bb4601f08b6fe4e095358e04
 
 name:           servant-util
-version:        0.3
+version:        0.4
 synopsis:       Servant servers utilities.
 description:    Basement for common Servant combinators like filtering, sorting, pagination and semantical logging.
 category:       Servant, Web

@@ -1,6 +1,6 @@
 <<: !include "../hpack/module.yaml"
 name:                servant-util
-version:             0.3
+version:             0.4
 synopsis:            Servant servers utilities.
 description:
   Basement for common Servant combinators like filtering, sorting, pagination and semantical logging.
