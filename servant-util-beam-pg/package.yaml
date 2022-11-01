@@ -1,6 +1,6 @@
 <<: !include "../hpack/module.yaml"
 name:                servant-util-beam-pg
-version:             0.4
+version:             0.4.1
 synopsis:            Implementation of servant-util primitives for beam-postgres.
 category:            Servant, Web, Database
 
@@ -13,7 +13,7 @@ dependencies:
 - servant-client
 - servant-client-core
 - servant-server
-- servant-util >= 0.1.0 && < 0.4
+- servant-util >= 0.1.0 && < 0.5
 - text
 - universum
 

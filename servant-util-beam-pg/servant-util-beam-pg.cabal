@@ -4,10 +4,10 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: dc7c172794568494e65007d712b2c9cf16507724b081993a576e7c9fdcdc7e67
+-- hash: 181ed4fbcb01887a6876bf359417322f5ad0bc5aac0824b994844756ad71e3cb
 
 name:           servant-util-beam-pg
-version:        0.4
+version:        0.4.1
 synopsis:       Implementation of servant-util primitives for beam-postgres.
 category:       Servant, Web, Database
 homepage:       https://github.com/serokell/servant-util#readme
@@ -78,7 +78,7 @@ library
     , servant-client
     , servant-client-core
     , servant-server
-    , servant-util >=0.1.0 && <0.4
+    , servant-util >=0.1.0 && <0.5
     , text
     , universum
   default-language: Haskell2010
@@ -132,7 +132,7 @@ executable servant-util-beam-pg-examples
     , servant-client
     , servant-client-core
     , servant-server
-    , servant-util >=0.1.0 && <0.4
+    , servant-util >=0.1.0 && <0.5
     , text
     , universum
   default-language: Haskell2010
@@ -193,7 +193,7 @@ test-suite servant-util-beam-pg-test
     , servant-client
     , servant-client-core
     , servant-server
-    , servant-util >=0.1.0 && <0.4
+    , servant-util >=0.1.0 && <0.5
     , servant-util-beam-pg
     , text
     , universum
