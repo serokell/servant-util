@@ -1,14 +1,4 @@
 steps:
- - label: build
-   commands:
-   - nix-build ci.nix -A all-components
-
- - label: test servant-util
-   commands:
-   - nix-build ci.nix -A packages.servant-util.tests.servant-util-test
-   - ./result/bin/servant-util-test
-
- - label: test servant-util-beam-pg
-   commands:
-   - nix-build ci.nix -A packages.servant-util-beam-pg.tests.servant-util-beam-pg-test
-   - ./result/bin/servant-util-beam-pg-test
+  - label: check
+    commands:
+      - nix flake check -L
