@@ -32,7 +32,6 @@ dependencies:
 - servant-swagger-ui-core
 - swagger2
 - text
-- text-format
 - time
 - reflection
 - regex-posix

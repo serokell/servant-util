@@ -134,7 +134,6 @@ library
     , servant-swagger-ui-core
     , swagger2
     , text
-    , text-format
     , time
     , universum
     , wai
@@ -212,7 +211,6 @@ executable servant-util-examples
     , servant-util
     , swagger2
     , text
-    , text-format
     , time
     , universum
     , wai
@@ -304,7 +302,6 @@ test-suite servant-util-test
     , servant-util
     , swagger2
     , text
-    , text-format
     , time
     , universum
     , wai
