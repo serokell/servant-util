@@ -4,7 +4,6 @@ module Servant.Util.Combinators.Sorting.Server () where
 
 import Universum
 
-import Data.Char (isAlphaNum)
 import qualified Data.List as L
 import qualified Data.Set as S
 import Servant.API (FromHttpApiData (..), (:>))
@@ -79,7 +78,10 @@ instance ReifyParamsNames allowed =>
         allowedParams = reifyParamsNamesSet @allowed
 
         paramNameParser = do
-            name <- P.takeWhile1P (Just "sorting item name") isAlphaNum <?> "parameter name"
+            -- The exlusion of `,` and `)` happens because 'paramNameParser' is called within 'itemParser',
+            -- which itself does the exlusion of ')'. Since it hasn't happened yet, we need to be mindful of
+            -- closing parens.
+            name <- P.takeWhile1P (Just "sorting item name") (\c -> c /= ',' && c /= ')') <?> "parameter name"
             unless (name `S.member` allowedParams) $
                 fail $ "unknown parameter " <> show name <>
                        " (expected one of " <> show (toList allowedParams) <> ")"
