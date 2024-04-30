@@ -82,7 +82,7 @@ data ApiMethods route = ApiMethods
       :> SortingParams
           [ "name" ?: Text
           , "rating" ?: Word8
-          , "createdAt" ?: UTCTime
+          , "created_at" ?: UTCTime
           ]
          '[ "isbn" ?: 'Asc Isbn
           ]
@@ -93,7 +93,7 @@ data ApiMethods route = ApiMethods
       :- "overrideable"
       :> SortingParams
           [ "rating" ?: Word8
-          , "createdAt" ?: UTCTime
+          , "created_at" ?: UTCTime
           , "isbn" ?: Isbn
           ]
           [ "rating" ?: 'Desc Word8
@@ -121,7 +121,7 @@ apiHandlers = ApiMethods
       let sortingApp Book{..} =
             fieldSort @"name" name .*.
             fieldSort @"rating" rating .*.
-            fieldSort @"createdAt" createdAt .*.
+            fieldSort @"created_at" createdAt .*.
             fieldSort @"isbn" isbn .*.
             HNil
       return $ sortBySpec sortingSpec sortingApp allBooks
@@ -129,7 +129,7 @@ apiHandlers = ApiMethods
   , amOverrideableSort = \sortingSpec -> do
       let sortingApp Book{..} =
             fieldSort @"rating" rating .*.
-            fieldSort @"createdAt" createdAt .*.
+            fieldSort @"created_at" createdAt .*.
             fieldSort @"isbn" isbn .*.
             fieldSort @"rating" rating .*.
             fieldSort @"isbn" isbn .*.
@@ -173,7 +173,7 @@ spec =
 
       it "Fully determining sorting (base doesn't matter)" $
         \ApiMethods{..} -> do
-          res <- amSimpleSort [asc #createdAt]
+          res <- amSimpleSort [asc #created_at]
           map isbn res `shouldBe` [Isbn 111, Isbn 100, Isbn 120]
 
       it "Partially determining sorting (base matters)" $
@@ -198,7 +198,7 @@ spec =
         -- since it is part of base sorting. But base sorting matters last, so
         -- that wouldn't be valid.
         \ApiMethods{..} -> do
-          res <- amOverrideableSort [asc #rating, asc #createdAt]
+          res <- amOverrideableSort [asc #rating, asc #created_at]
           map isbn res `shouldBe` [Isbn 120, Isbn 111, Isbn 100]
 
       it "Overriden field from base sorting doesn't cancel the remaining base sorting" $

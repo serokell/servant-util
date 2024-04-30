@@ -4,6 +4,7 @@ Unreleased
 * Replaced `mapAutoFilterValue` in `IsAutoFilter` typeclass with `Functor` superclass.
 * Exposed `MkSomeFilter` constraint.
 * Added support for building the project with `servant` version >= 0.19.
+* Relax the parser of sorting keys to allow for non-alphanumeric identifier formats, like snake_case.
 
 0.3
 ===
