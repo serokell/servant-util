@@ -25,7 +25,7 @@ you must be able to justify that.
 
 - [ ] Public contracts
   - Any modifications of public contracts comply with the [Evolution
-  of Public Contracts](https://www.notion.so/serokell/Evolution-of-Public-Contracts-2a3bf7971abe4806a24f63c84e7076c5) policy.
+  of Public Contracts](https://serokell.notion.site/Evolution-of-Public-Contracts-2a3bf7971abe4806a24f63c84e7076c5) policy.
   - I added an entry to the [changelog](../tree/master/CHANGES.md) if my changes are visible to the users
         and
   - provided a migration guide for breaking changes if possible.
@@ -33,7 +33,7 @@ you must be able to justify that.
 #### Stylistic guide (mandatory)
 
 - [ ] Style
-  - My commits comply with [the policy used in Serokell](https://www.notion.so/serokell/Where-and-how-to-commit-your-work-58f8973a4b3142c8abbd2e6fd5b3a08e).
+  - My commits comply with [the policy used in Serokell](https://serokell.notion.site/Commit-and-PR-policy-4cf98e1a910a415d86b5f2491d9af1af).
   - My code complies with the [style guide](../tree/master/docs/code-style.md).
   - Each commit of this pull request contains a description.
     - For new features, this description contains the use case for the new functionality.
